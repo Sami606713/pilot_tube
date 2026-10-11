@@ -1,26 +1,96 @@
 @import "tailwindcss";
 
+/*
+  PilotTube design tokens.
+  One neutral family (cool zinc) + one accent (the same green the HyperFrames cards use).
+  Radius rule: panels 12px (rounded-xl), controls 8px (rounded-lg), status chips full pill.
+*/
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --bg: #f6f6f7;
+  --surface: #ffffff;
+  --surface-2: #f0f0f2;
+  --line: #e3e3e7;
+  --line-strong: #d0d0d6;
+  --fg: #17171a;
+  --muted: #55555e;
+  --subtle: #74747d;
+  --accent: #7cff6b;
+  --accent-fg: #0d1a0b;
+  /* Accent used as text/icon on the page background: darker in light mode for contrast. */
+  --accent-ink: #23801c;
+  --accent-soft: #e5fbe1;
+  --danger: #c2352b;
+  --danger-soft: #fdecea;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #0b0b0d;
+    --surface: #121215;
+    --surface-2: #19191d;
+    --line: #26262c;
+    --line-strong: #34343b;
+    --fg: #f2f2f4;
+    --muted: #a6a6b0;
+    --subtle: #7b7b86;
+    --accent-ink: #8dff7d;
+    --accent-soft: #16261a;
+    --danger: #ff8a7e;
+    --danger-soft: #2a1513;
   }
 }
 
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  color-scheme: light dark;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+/* Skeleton shimmer for loading states. */
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 0%, var(--line) 50%, var(--surface-2) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }

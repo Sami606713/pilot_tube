@@ -1,69 +1,114 @@
-import Image from "next/image";
+import Link from "next/link";
+import { connection } from "next/server";
+import { Suspense } from "react";
+import { RefreshNewsButton, StoryList } from "@/components/news-queue";
+import { PageHeader, SectionTitle } from "@/components/page-header";
+import { NewShortButton, ShortsList, ShortsListSkeleton } from "@/components/shorts-list";
+import { timeAgo } from "@/lib/format";
+import { unusedStories } from "@/lib/news/store";
+import { getOverview, listShorts } from "@/lib/shorts";
 
-export default function Home() {
+export default function OverviewPage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <>
+      <PageHeader
+        title="Overview"
+        description="Every Short starts from a real AI story published in the last two days."
+        actions={<NewShortButton />}
+      />
+      <Suspense fallback={<OverviewSkeleton />}>
+        <OverviewContent />
+      </Suspense>
+    </>
+  );
+}
+
+async function OverviewContent() {
+  await connection();
+  const shorts = listShorts();
+  const overview = getOverview(shorts);
+  const stories = unusedStories(48, 6);
+
+  const stats = [
+    { label: "Shorts made", value: overview.total },
+    { label: "Rendered", value: overview.rendered },
+    { label: "Ready to render", value: overview.ready },
+    { label: "Stories in queue", value: overview.queuedStories },
+  ];
+
+  return (
+    <div className="flex flex-col gap-10">
+      <dl className="grid grid-cols-2 overflow-hidden rounded-xl border border-line bg-surface md:grid-cols-4">
+        {stats.map((stat, i) => (
+          <div
+            key={stat.label}
+            className={`flex flex-col gap-1 px-5 py-4 ${i % 2 === 1 ? "border-l border-line" : ""} ${i >= 2 ? "border-t border-line md:border-t-0" : ""} ${i === 2 ? "md:border-l" : ""}`}
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            <dt className="text-xs text-muted">{stat.label}</dt>
+            <dd className="font-mono text-2xl font-medium tabular-nums tracking-tight">{stat.value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-8">
+        <section className="lg:col-span-8">
+          <SectionTitle
+            action={
+              shorts.length > 6 && (
+                <Link href="/shorts" className="text-sm text-muted hover:text-fg">
+                  View all
+                </Link>
+              )
+            }
           >
-            Documentation
-          </a>
+            Recent Shorts
+          </SectionTitle>
+          <ShortsList shorts={shorts.slice(0, 6)} />
+        </section>
+
+        <section className="lg:col-span-4">
+          <SectionTitle action={<RefreshNewsButton />}>Up next from the news</SectionTitle>
+          <div className="overflow-hidden rounded-xl border border-line bg-surface">
+            <StoryList stories={stories} empty="No unused stories. Refresh the news to pull the latest." />
+            <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-3 text-xs text-subtle">
+              <span>{overview.lastNewsAt ? `Fetched ${timeAgo(overview.lastNewsAt)}` : "Never fetched"}</span>
+              <Link href="/news" className="text-muted hover:text-fg">
+                Full queue
+              </Link>
+            </div>
+          </div>
+          {overview.sources.length > 0 && (
+            <div className="mt-6">
+              <h3 className="mb-2 text-xs text-muted">Stories by source, last 48 hours</h3>
+              <ul className="flex flex-wrap gap-1.5">
+                {overview.sources.map((s) => (
+                  <li key={s.source} className="rounded-full border border-line bg-surface px-2.5 py-1 text-xs text-muted">
+                    {s.source} <span className="ml-1 font-mono tabular-nums text-fg">{s.count}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function OverviewSkeleton() {
+  return (
+    <div className="flex flex-col gap-10" aria-busy="true">
+      <div className="skeleton h-[82px] rounded-xl" />
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-8">
+        <div className="lg:col-span-8">
+          <div className="mb-3 h-9" />
+          <ShortsListSkeleton />
         </div>
-      </main>
+        <div className="lg:col-span-4">
+          <div className="mb-3 h-9" />
+          <div className="skeleton h-80 rounded-xl" />
+        </div>
+      </div>
     </div>
   );
 }

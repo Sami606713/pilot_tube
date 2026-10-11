@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PilotTube
 
-## Getting Started
+Automated YouTube Shorts for daily AI news. Next.js + TypeScript, no Python.
 
-First, run the development server:
+**Dashboard:** `/` overview, `/shorts` all Shorts, `/shorts/:id` one Short with a live preview player (voice + clips + captions + cards), `/news` the story queue.
+
+**Pipeline:** AI news → Agnes script → Deepgram voice + word timings → Pexels clips → HyperFrames cards → Remotion render → YouTube upload
+
+## Status
+
+- [x] **Phase 1** — news fetcher + Agnes script writer
+- [x] **Phase 2** — Deepgram voice (Aura-2) + word timings (Nova-3)
+- [x] **Phase 3** — Pexels clip search
+- [x] **Phase 4** — HyperFrames cards (hook, stats, outro)
+- [x] **Phase 5** — Remotion assembly (final MP4)
+- [ ] Phase 6 — review dashboard
+- [ ] Phase 7 — YouTube upload + daily schedule
+- [ ] Phase 8 — deploy to a VPS
+
+## Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local   # fill in your keys
+npm install
+npm run dev                  # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Requires Node 24+ (uses the built-in `node:sqlite`). Data is stored in `data/app.db`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## API
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Route | What it does |
+|---|---|
+| `GET /api/news` | Fetch the last 24h of AI news and return unused stories |
+| `POST /api/script` | Pick the best unused story, read the article, write a Shorts script |
+| `GET /api/script` | List saved scripts |
+| `POST /api/script/:id/voice` | Make the voiceover MP3 + word-timed captions + scene timings |
+| `GET /api/script/:id/voice` | Get the saved voiceover data |
+| `GET /api/script/:id/audio` | Play the voiceover MP3 |
+| `POST /api/script/:id/footage` | Find + download one vertical Pexels clip per scene |
+| `GET /api/script/:id/footage` | List the chosen clips (with Pexels author credits) |
+| `GET /api/script/:id/clip/:scene` | Stream a scene clip |
+| `POST /api/script/:id/cards` | Render hook / stat / outro overlays with HyperFrames |
+| `GET /api/script/:id/card/:name` | Get one card (transparent WebM) |
+| `POST /api/script/:id/render` | Render the final MP4 with Remotion (~1.5 to 2 min) |
+| `GET /api/script/:id/video` | Stream the final MP4 (`?download=1` to download) |
 
-## Learn More
+## News sources
 
-To learn more about Next.js, take a look at the following resources:
+Hacker News (Algolia API), TechCrunch AI, The Verge AI, MIT Technology Review AI, OpenAI, Google AI, Hugging Face — see `src/lib/news/sources.ts`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Stories whose article can't be read (paywall or bot block) are skipped, so scripts are only written from real article text.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Files per Short
 
-## Deploy on Vercel
+`data/videos/<scriptId>/` holds `voice.mp3`, `timings.json` (caption words + scene start/end times) and `clips/` (one Pexels MP4 per scene, ~50 MB per Short). A Pexels clip is not reused in another Short for 30 days. Change the voice with `DEEPGRAM_VOICE` in `.env.local`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## HyperFrames cards
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`cards/` is a HyperFrames project (created with `npx hyperframes init cards --resolution portrait`). Each card is a 3-second, 1080×1920 composition that takes the script's text through HyperFrames variables and renders to a **transparent WebM**, so Remotion can lay it over the footage:
+
+| Card | File | Variables |
+|---|---|---|
+| Hook | `cards/compositions/hook.html` | `headline`, `kicker`, `accent` |
+| Stat | `cards/compositions/stat.html` | `value` (counts up if numeric), `label`, `accent` |
+| Outro | `cards/compositions/outro.html` | `text`, `handle`, `accent` |
+
+Preview/edit them with `cd cards && npm run dev`. Set `CHANNEL_HANDLE` and `CARD_ACCENT` in `.env.local`.
+
+## Remotion render
+
+`video/` is a Remotion project (created with `npx create-video --yes --blank video`). The `Short` composition (`video/src/Short.tsx`) only draws; PilotTube builds its props in `src/lib/render/render.ts` with the same timing rules as the dashboard preview (`src/lib/timeline.ts`):
+
+- one Pexels clip per scene with a slow push-in (slowed down if a clip is shorter than its scene)
+- word-by-word captions (max 3 words, spoken word in the accent color), hidden during the outro
+- HyperFrames cards laid over the footage as transparent video
+- the Deepgram voiceover, then FFmpeg normalizes loudness to about -14 LUFS (Shorts level)
+
+Output: `data/renders/<id>.mp4`, 1080x1920, H.264, 30 fps. Open the composition in Remotion Studio with `cd video && npm run dev`.
