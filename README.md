@@ -17,6 +17,19 @@ Automated YouTube Shorts for daily AI news. Next.js + TypeScript, no Python.
 - [ ] Phase 7 — YouTube upload + daily schedule
 - [ ] Phase 8 — deploy to a VPS
 
+## Project structure
+
+```
+src/app/         pages (overview, shorts, news) + API routes
+src/components/  dashboard UI
+src/lib/         pipeline engine: news, script, voice, footage, cards, render
+src/remotion/    the Remotion video (Short.tsx)
+cards/           HyperFrames card designs (HTML, run with npx, no node_modules)
+data/            database, per-Short media, final renders (not in git)
+```
+
+One `package.json`, one `node_modules`.
+
 ## Setup
 
 ```bash
@@ -65,15 +78,16 @@ Stories whose article can't be read (paywall or bot block) are skipped, so scrip
 | Stat | `cards/compositions/stat.html` | `value` (counts up if numeric), `label`, `accent` |
 | Outro | `cards/compositions/outro.html` | `text`, `handle`, `accent` |
 
-Preview/edit them with `cd cards && npm run dev`. Set `CHANNEL_HANDLE` and `CARD_ACCENT` in `.env.local`.
+Preview/edit them with `npm run cards`. Set `CHANNEL_HANDLE` and `CARD_ACCENT` in `.env.local`.
 
 ## Remotion render
 
-`video/` is a Remotion project (created with `npx create-video --yes --blank video`). The `Short` composition (`video/src/Short.tsx`) only draws; PilotTube builds its props in `src/lib/render/render.ts` with the same timing rules as the dashboard preview (`src/lib/timeline.ts`):
+Remotion lives inside the app in `src/remotion/` (the layout of Remotion's official Next.js template), sharing the one `package.json` and `node_modules`. The `Short` composition (`src/remotion/Short.tsx`) only draws; PilotTube builds its props in `src/lib/render/render.ts` with the same timing rules as the dashboard preview (`src/lib/timeline.ts`):
 
 - one Pexels clip per scene with a slow push-in (slowed down if a clip is shorter than its scene)
 - word-by-word captions (max 3 words, spoken word in the accent color), hidden during the outro
 - HyperFrames cards laid over the footage as transparent video
 - the Deepgram voiceover, then FFmpeg normalizes loudness to about -14 LUFS (Shorts level)
 
-Output: `data/renders/<id>.mp4`, 1080x1920, H.264, 30 fps. Open the composition in Remotion Studio with `cd video && npm run dev`.
+Output: `data/renders/<id>.mp4`, 1080x1920, H.264, 30 fps. Open the composition in Remotion Studio with `npm run remotion`.
+# pilot_tube
