@@ -12,9 +12,9 @@ export const metadata: Metadata = { title: "News queue" };
 type Status = "queued" | "used" | "skipped";
 
 const STATUS: Record<Status, { label: string; className: string; hint: string }> = {
-  queued: { label: "Queued", className: "border-line-strong text-fg", hint: "Can be picked for the next Short" },
-  used: { label: "Made", className: "border-transparent bg-accent-soft text-accent-ink", hint: "A Short was made from this story" },
-  skipped: { label: "Skipped", className: "border-line text-subtle", hint: "Article could not be read (paywall or bot block)" },
+  queued: { label: "Queued", className: "border-border-strong text-foreground", hint: "Can be picked for the next Short" },
+  used: { label: "Made", className: "border-transparent bg-brand-soft text-brand", hint: "A Short was made from this story" },
+  skipped: { label: "Skipped", className: "border-border text-subtle", hint: "Article could not be read (paywall or bot block)" },
 };
 
 function statusOf(story: StoryRow): Status {
@@ -43,7 +43,7 @@ async function Queue() {
   const stories = recentStories();
   if (stories.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-line-strong px-6 py-12 text-sm text-muted">
+      <div className="rounded-xl border border-dashed border-border-strong px-6 py-12 text-sm text-muted-foreground">
         No stories in the last 48 hours yet. Refresh the news to fetch them.
       </div>
     );
@@ -54,12 +54,12 @@ async function Queue() {
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-muted">
-        <span className="font-mono tabular-nums text-fg">{counts.queued}</span> queued,{" "}
-        <span className="font-mono tabular-nums text-fg">{counts.used}</span> made into Shorts,{" "}
-        <span className="font-mono tabular-nums text-fg">{counts.skipped}</span> skipped
+      <p className="text-sm text-muted-foreground">
+        <span className="font-mono tabular-nums text-foreground">{counts.queued}</span> queued,{" "}
+        <span className="font-mono tabular-nums text-foreground">{counts.used}</span> made into Shorts,{" "}
+        <span className="font-mono tabular-nums text-foreground">{counts.skipped}</span> skipped
       </p>
-      <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface">
+      <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
         {stories.map((story) => {
           const status = STATUS[statusOf(story)];
           return (
@@ -68,15 +68,15 @@ async function Queue() {
                 href={story.url}
                 target="_blank"
                 rel="noreferrer"
-                className="group grid grid-cols-[1fr_auto] items-center gap-4 px-4 py-3 transition-colors hover:bg-surface-2/60 sm:grid-cols-[1fr_9rem_6rem_auto]"
+                className="group grid grid-cols-[1fr_auto] items-center gap-4 px-4 py-3 transition-colors hover:bg-secondary/60 sm:grid-cols-[1fr_9rem_6rem_auto]"
               >
                 <span className="min-w-0">
-                  <span className="line-clamp-2 text-sm text-fg">{story.title}</span>
+                  <span className="line-clamp-2 text-sm text-foreground">{story.title}</span>
                   <span className="mt-0.5 block text-xs text-subtle sm:hidden">
                     {story.source} / {timeAgo(story.published_at)}
                   </span>
                 </span>
-                <span className="hidden truncate text-xs text-muted sm:block">{story.source}</span>
+                <span className="hidden truncate text-xs text-muted-foreground sm:block">{story.source}</span>
                 <span className="hidden text-xs text-subtle sm:block">{timeAgo(story.published_at)}</span>
                 <span className="flex items-center gap-3">
                   <span title={status.hint} className={`rounded-full border px-2 py-0.5 text-xs ${status.className}`}>

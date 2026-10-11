@@ -64,7 +64,7 @@ export function RunPipelineButton({ shortId, missing }: { shortId: number; missi
         )}
       </button>
       {error && (
-        <p role="alert" className="flex max-w-sm items-start gap-1.5 text-xs text-danger">
+        <p role="alert" className="flex max-w-sm items-start gap-1.5 text-xs text-destructive">
           <WarningCircle size={14} weight="bold" className="mt-px shrink-0" />
           <span>{error}</span>
         </p>

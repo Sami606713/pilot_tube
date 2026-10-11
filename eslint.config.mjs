@@ -12,8 +12,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Sub-projects with their own tooling.
-    "video/**",
+    // HyperFrames HTML project, checked with its own linter.
     "cards/**",
   ]),
 ]);

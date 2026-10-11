@@ -30,5 +30,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "video", "cards"]
+  "exclude": ["node_modules", "cards", "remotion.config.ts"]
 }

@@ -43,7 +43,7 @@ function previewData(short: ShortDetail): PreviewData {
 
 function Section({ title, icon, action, children }: { title: string; icon: ReactNode; action?: ReactNode; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-4 border-t border-line pt-6">
+    <section className="flex flex-col gap-4 border-t border-border pt-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="flex items-center gap-2 text-sm font-semibold">
           <span className="text-subtle">{icon}</span>
@@ -76,14 +76,14 @@ async function ShortView({ id }: { id: number }) {
     <PreviewProvider data={previewData(short)}>
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-5">
-          <Link href="/shorts" className="inline-flex w-fit items-center gap-1.5 text-sm text-muted hover:text-fg">
-            <ArrowLeft size={14} /> Shorts
+          <Link href="/shorts" className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+            <ArrowLeft size={14} /> Scripts
           </Link>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex min-w-0 flex-col gap-2">
               <h1 className="text-2xl font-semibold tracking-tight text-balance md:text-[28px]">{short.title}</h1>
-              <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
-                <a href={short.storyUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 hover:text-fg">
+              <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                <a href={short.storyUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 hover:text-foreground">
                   {short.source} <ArrowSquareOut size={13} />
                 </a>
                 <span>{timeAgo(short.createdAt)}</span>
@@ -101,11 +101,11 @@ async function ShortView({ id }: { id: number }) {
           <aside className="flex flex-col gap-6 lg:col-span-5 xl:col-span-4">
             <div className="lg:sticky lg:top-8 flex flex-col gap-6">
               <PreviewPlayer />
-              <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-4">
-                <h2 className="text-xs text-muted">YouTube details</h2>
+              <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4">
+                <h2 className="text-xs text-muted-foreground">YouTube details</h2>
                 <p className="text-sm font-medium">{short.script.title}</p>
-                <p className="text-sm leading-relaxed text-muted">{short.script.description}</p>
-                <p className="text-sm text-accent-ink">{short.script.hashtags.join(" ")}</p>
+                <p className="text-sm leading-relaxed text-muted-foreground">{short.script.description}</p>
+                <p className="text-sm text-brand">{short.script.hashtags.join(" ")}</p>
               </div>
             </div>
           </aside>
@@ -113,9 +113,9 @@ async function ShortView({ id }: { id: number }) {
           <div className="flex flex-col gap-8 lg:col-span-7 xl:col-span-8">
             <section className="flex flex-col gap-2">
               <h2 className="text-sm font-semibold">Script</h2>
-              <p className="text-xs text-muted">
+              <p className="text-xs text-muted-foreground">
                 Written from{" "}
-                <a href={short.storyUrl} target="_blank" rel="noreferrer" className="underline decoration-line-strong underline-offset-2 hover:text-fg">
+                <a href={short.storyUrl} target="_blank" rel="noreferrer" className="underline decoration-border-strong underline-offset-2 hover:text-foreground">
                   {short.storyTitle}
                 </a>
                 . Click a scene to jump the preview there.
@@ -135,20 +135,20 @@ async function ShortView({ id }: { id: number }) {
               {short.voiceover ? (
                 <dl className="grid grid-cols-3 gap-4 text-sm">
                   <div>
-                    <dt className="text-xs text-muted">Length</dt>
+                    <dt className="text-xs text-muted-foreground">Length</dt>
                     <dd className="font-mono tabular-nums">{short.voiceover.duration.toFixed(1)}s</dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-muted">Caption words</dt>
+                    <dt className="text-xs text-muted-foreground">Caption words</dt>
                     <dd className="font-mono tabular-nums">{short.voiceover.words.length}</dd>
                   </div>
                   <div className="min-w-0">
-                    <dt className="text-xs text-muted">Voice</dt>
+                    <dt className="text-xs text-muted-foreground">Voice</dt>
                     <dd className="truncate font-mono text-xs leading-5">{short.voiceover.voice}</dd>
                   </div>
                 </dl>
               ) : (
-                <p className="text-sm text-muted">Deepgram Aura reads the script, then Nova times every word for the captions.</p>
+                <p className="text-sm text-muted-foreground">Deepgram Aura reads the script, then Nova times every word for the captions.</p>
               )}
             </Section>
 
@@ -174,10 +174,10 @@ async function ShortView({ id }: { id: number }) {
                         label={`Scene ${clip.sceneIndex + 1}: ${clip.query}`}
                       >
                         <span className="truncate text-xs font-medium">{clip.query}</span>
-                        <span className={`text-[11px] ${tooShort ? "text-danger" : "text-subtle"}`}>
+                        <span className={`text-[11px] ${tooShort ? "text-destructive" : "text-subtle"}`}>
                           {clip.duration}s clip{tooShort ? ", will loop" : ""}
                         </span>
-                        <a href={clip.pexelsUrl} target="_blank" rel="noreferrer" className="truncate text-[11px] text-subtle hover:text-fg">
+                        <a href={clip.pexelsUrl} target="_blank" rel="noreferrer" className="truncate text-[11px] text-subtle hover:text-foreground">
                           {clip.author}
                         </a>
                       </MediaTile>
@@ -185,7 +185,7 @@ async function ShortView({ id }: { id: number }) {
                   })}
                 </div>
               ) : (
-                <p className="text-sm text-muted">
+                <p className="text-sm text-muted-foreground">
                   One vertical Pexels clip per scene, never reused within 30 days.
                   {!short.voiceover && " Make the voice first so clips match the real scene lengths."}
                 </p>
@@ -226,7 +226,7 @@ async function ShortView({ id }: { id: number }) {
                   })}
                 </div>
               ) : (
-                <p className="text-sm text-muted">HyperFrames renders the hook, stat and outro overlays from the script&apos;s card text, about a minute.</p>
+                <p className="text-sm text-muted-foreground">HyperFrames renders the hook, stat and outro overlays from the script&apos;s card text, about a minute.</p>
               )}
             </Section>
 
@@ -248,41 +248,41 @@ async function ShortView({ id }: { id: number }) {
                     controls
                     playsInline
                     preload="metadata"
-                    className="aspect-[9/16] w-full rounded-xl bg-[#0b0b0d] ring-1 ring-line"
+                    className="aspect-[9/16] w-full rounded-xl bg-[#0b0b0d] ring-1 ring-border"
                   />
                   <div className="flex flex-col gap-4">
                     {stale && (
-                      <p className="flex items-start gap-2 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
+                      <p className="flex items-start gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
                         <WarningCircle size={16} weight="bold" className="mt-0.5 shrink-0" />
                         The voice or cards changed after this render. Re-render to include them.
                       </p>
                     )}
                     <dl className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <dt className="text-xs text-muted">Length</dt>
+                        <dt className="text-xs text-muted-foreground">Length</dt>
                         <dd className="font-mono tabular-nums">{render.duration.toFixed(1)}s</dd>
                       </div>
                       <div>
-                        <dt className="text-xs text-muted">File size</dt>
+                        <dt className="text-xs text-muted-foreground">File size</dt>
                         <dd className="font-mono tabular-nums">{(render.sizeBytes / 1024 / 1024).toFixed(1)} MB</dd>
                       </div>
                       <div>
-                        <dt className="text-xs text-muted">Render time</dt>
+                        <dt className="text-xs text-muted-foreground">Render time</dt>
                         <dd className="font-mono tabular-nums">{clock(render.renderSeconds)}</dd>
                       </div>
                       <div>
-                        <dt className="text-xs text-muted">Rendered</dt>
+                        <dt className="text-xs text-muted-foreground">Rendered</dt>
                         <dd>{timeAgo(render.createdAt)}</dd>
                       </div>
                     </dl>
-                    <p className="text-xs text-muted">1080 by 1920, H.264, 30 fps, audio normalized to Shorts loudness.</p>
+                    <p className="text-xs text-muted-foreground">1080 by 1920, H.264, 30 fps, audio normalized to Shorts loudness.</p>
                     <a href={`${base}/video?download=1&v=${encodeURIComponent(render.createdAt)}`} className={`${buttonStyles.base} ${buttonStyles.secondary} w-fit`}>
                       <DownloadSimple size={16} /> Download MP4
                     </a>
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-muted">
+                <p className="text-sm text-muted-foreground">
                   {canRender
                     ? "Remotion joins the clips, voice, captions and cards into the final 1080 by 1920 MP4. Takes a few minutes."
                     : "Make the voice and find clips first. Cards are optional but recommended."}

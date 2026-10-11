@@ -21,7 +21,7 @@ export function NewShortButton({ variant = "primary" }: { variant?: "primary" | 
 
 function Thumb({ short }: { short: ShortSummary }) {
   return (
-    <div className="relative aspect-[9/16] w-11 shrink-0 overflow-hidden rounded-md bg-surface-2 ring-1 ring-inset ring-line">
+    <div className="relative aspect-[9/16] w-11 shrink-0 overflow-hidden rounded-md bg-secondary ring-1 ring-inset ring-border">
       {short.thumbId ? (
         // eslint-disable-next-line @next/next/no-img-element -- local API thumbnail, already 270px
         <img src={`/api/script/${short.id}/clip/0/poster?v=${short.thumbId}`} alt="" loading="lazy" className="size-full object-cover" />
@@ -35,10 +35,10 @@ function Thumb({ short }: { short: ShortSummary }) {
 export function ShortsList({ shorts }: { shorts: ShortSummary[] }) {
   if (shorts.length === 0) {
     return (
-      <div className="flex flex-col items-start gap-4 rounded-xl border border-dashed border-line-strong px-6 py-12">
+      <div className="flex flex-col items-start gap-4 rounded-xl border border-dashed border-border-strong px-6 py-12">
         <div className="flex flex-col gap-1">
           <h3 className="text-base font-semibold">No Shorts yet</h3>
-          <p className="max-w-[52ch] text-sm text-muted">
+          <p className="max-w-[52ch] text-sm text-muted-foreground">
             PilotTube reads today&apos;s AI news, picks the strongest story and writes a 30 to 45 second script from the real article.
           </p>
         </div>
@@ -48,17 +48,17 @@ export function ShortsList({ shorts }: { shorts: ShortSummary[] }) {
   }
 
   return (
-    <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface">
+    <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
       {shorts.map((short) => (
         <li key={short.id}>
           <Link
             href={`/shorts/${short.id}`}
-            className="group grid grid-cols-[auto_1fr_auto] items-center gap-4 px-4 py-3 transition-colors hover:bg-surface-2/60 focus-visible:bg-surface-2 focus-visible:outline-none"
+            className="group grid grid-cols-[auto_1fr_auto] items-center gap-4 px-4 py-3 transition-colors hover:bg-secondary/60 focus-visible:bg-secondary focus-visible:outline-none"
           >
             <Thumb short={short} />
             <div className="flex min-w-0 flex-col gap-1">
-              <span className="truncate text-sm font-medium text-fg">{short.title}</span>
-              <span className="truncate text-xs text-muted">
+              <span className="truncate text-sm font-medium text-foreground">{short.title}</span>
+              <span className="truncate text-xs text-muted-foreground">
                 {short.source} <span className="text-subtle">/</span> {timeAgo(short.createdAt)}
               </span>
               <div className="mt-1 flex items-center gap-3 sm:hidden">
@@ -72,8 +72,8 @@ export function ShortsList({ shorts }: { shorts: ShortSummary[] }) {
                   {short.done.includes("render") ? "Rendered" : short.next === "render" ? "Ready to render" : `Next: ${STEP_META[short.next].label}`}
                 </span>
               </div>
-              <span className="hidden w-12 text-right font-mono text-xs tabular-nums text-muted md:block">{clock(short.duration)}</span>
-              <ArrowRight size={16} className="text-subtle transition-transform group-hover:translate-x-0.5 group-hover:text-fg" />
+              <span className="hidden w-12 text-right font-mono text-xs tabular-nums text-muted-foreground md:block">{clock(short.duration)}</span>
+              <ArrowRight size={16} className="text-subtle transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
             </div>
           </Link>
         </li>
@@ -84,7 +84,7 @@ export function ShortsList({ shorts }: { shorts: ShortSummary[] }) {
 
 export function ShortsListSkeleton({ rows = 4 }: { rows?: number }) {
   return (
-    <div className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface" aria-busy="true" aria-label="Loading Shorts">
+    <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card" aria-busy="true" aria-label="Loading Shorts">
       {Array.from({ length: rows }, (_, i) => (
         <div key={i} className="flex items-center gap-4 px-4 py-3">
           <div className="skeleton aspect-[9/16] w-11 rounded-md" />

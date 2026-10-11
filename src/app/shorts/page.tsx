@@ -5,12 +5,12 @@ import { PageHeader } from "@/components/page-header";
 import { NewShortButton, ShortsList, ShortsListSkeleton } from "@/components/shorts-list";
 import { listShorts } from "@/lib/shorts";
 
-export const metadata: Metadata = { title: "Shorts" };
+export const metadata: Metadata = { title: "Scripts" };
 
 export default function ShortsPage() {
   return (
     <>
-      <PageHeader title="Shorts" description="Open a Short to run its next step, preview it, or redo any part." actions={<NewShortButton />} />
+      <PageHeader title="Scripts" description="Every Short from script to render. Open one to run its next step or preview it." actions={<NewShortButton />} />
       <Suspense fallback={<ShortsListSkeleton rows={6} />}>
         <AllShorts />
       </Suspense>

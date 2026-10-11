@@ -3,7 +3,7 @@ import { execFile } from "node:child_process";
 import { mkdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
-import type { ShortProps } from "../../../video/src/types";
+import type { ShortProps } from "@/remotion/types";
 import { getCards } from "@/lib/cards/render";
 import { getDb } from "@/lib/db";
 import { getClips } from "@/lib/footage/clips";
@@ -12,8 +12,8 @@ import { getVoiceover, videoDir } from "@/lib/voice/voiceover";
 
 const run = promisify(execFile);
 
-/** The Remotion project created with `npx create-video --blank video`. */
-const VIDEO_PROJECT = path.resolve(/*turbopackIgnore: true*/ "video");
+/** Project root. Remotion lives in src/remotion, the layout of Remotion's official Next.js template. */
+const PROJECT_ROOT = path.resolve(/*turbopackIgnore: true*/ ".");
 const RENDERS_DIR = path.resolve(/*turbopackIgnore: true*/ process.env.DATA_DIR ?? "data", "renders");
 
 export type RenderResult = {
@@ -74,10 +74,10 @@ export async function renderShort(scriptId: number): Promise<RenderResult> {
   const started = Date.now();
   try {
     await run(
-      path.join(VIDEO_PROJECT, "node_modules", ".bin", "remotion"),
+      path.join(PROJECT_ROOT, "node_modules", ".bin", "remotion"),
       [
         "render",
-        "src/index.ts",
+        "src/remotion/index.ts",
         "Short",
         tempPath,
         `--props=${propsFile}`,
@@ -87,7 +87,7 @@ export async function renderShort(scriptId: number): Promise<RenderResult> {
         "--crf=20",
         "--log=error",
       ],
-      { cwd: VIDEO_PROJECT, timeout: 20 * 60_000, maxBuffer: 50 * 1024 * 1024 },
+      { cwd: PROJECT_ROOT, timeout: 20 * 60_000, maxBuffer: 50 * 1024 * 1024 },
     );
   } catch (err) {
     await rm(tempPath, { force: true });

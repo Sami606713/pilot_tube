@@ -152,3 +152,14 @@ export function getOverview(shorts: ShortSummary[]): Overview {
     lastNewsAt: last.at,
   };
 }
+
+export type ShortStatus = { label: "Draft" | "In production" | "Ready to render" | "Rendered" | "Published"; tone: "muted" | "progress" | "ready" | "done" };
+
+/** One human label per Short, shared by every list in the dashboard. */
+export function shortStatus(short: Pick<ShortSummary, "done" | "next">): ShortStatus {
+  if (short.done.includes("upload")) return { label: "Published", tone: "done" };
+  if (short.done.includes("render")) return { label: "Rendered", tone: "done" };
+  if (short.next === "render") return { label: "Ready to render", tone: "ready" };
+  if (short.done.length > 1) return { label: "In production", tone: "progress" };
+  return { label: "Draft", tone: "muted" };
+}

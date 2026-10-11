@@ -145,7 +145,7 @@ export function PreviewPlayer() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="relative mx-auto aspect-[9/16] w-full max-w-[340px] overflow-hidden rounded-xl bg-[#0b0b0d] ring-1 ring-line">
+      <div className="relative mx-auto aspect-[9/16] w-full max-w-[340px] overflow-hidden rounded-xl bg-[#0b0b0d] ring-1 ring-border">
         {clip ? (
           playing ? (
             <SceneVideo key={sceneIndex} src={clip.src} poster={clip.poster} offset={time - (scene?.start ?? 0)} playing={playing} />
@@ -190,7 +190,7 @@ export function PreviewPlayer() {
           onClick={toggle}
           disabled={!hasAudio}
           aria-label={playing ? "Pause preview" : "Play preview"}
-          className="grid size-9 shrink-0 place-items-center rounded-full bg-accent text-accent-fg transition-transform active:scale-95 disabled:opacity-40"
+          className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-95 disabled:opacity-40"
         >
           {playing ? <Pause size={16} weight="fill" /> : <Play size={16} weight="fill" />}
         </button>
@@ -203,9 +203,9 @@ export function PreviewPlayer() {
           onChange={(e) => seek(Number(e.target.value))}
           disabled={!hasAudio}
           aria-label="Seek"
-          className="h-1 flex-1 cursor-pointer accent-[var(--accent-ink)] disabled:cursor-default"
+          className="h-1 flex-1 cursor-pointer accent-[var(--primary)] disabled:cursor-default"
         />
-        <span className="shrink-0 whitespace-nowrap text-right font-mono text-xs tabular-nums text-muted">
+        <span className="shrink-0 whitespace-nowrap text-right font-mono text-xs tabular-nums text-muted-foreground">
           {clock(time)} / {clock(data.duration)}
         </span>
       </div>
@@ -230,20 +230,20 @@ export function SceneList({ scenes }: { scenes: { narration: string; pexelsQuery
               type="button"
               disabled={!hasTimings}
               onClick={() => timing && seek(timing.start + 0.01)}
-              className={`grid w-full grid-cols-[2rem_1fr_auto] items-start gap-3 rounded-lg px-2 py-2.5 text-left transition-colors enabled:hover:bg-surface-2/70 ${
-                active ? "bg-surface-2" : ""
+              className={`grid w-full grid-cols-[2rem_1fr_auto] items-start gap-3 rounded-lg px-2 py-2.5 text-left transition-colors enabled:hover:bg-secondary/70 ${
+                active ? "bg-secondary" : ""
               }`}
             >
-              <span className={`pt-0.5 font-mono text-xs tabular-nums ${active ? "text-accent-ink" : "text-subtle"}`}>
+              <span className={`pt-0.5 font-mono text-xs tabular-nums ${active ? "text-brand" : "text-subtle"}`}>
                 {hasTimings && timing ? clock(timing.start) : String(i + 1).padStart(2, "0")}
               </span>
               <span className="flex min-w-0 flex-col gap-1">
-                <span className="text-sm leading-relaxed text-fg">{scene.narration}</span>
+                <span className="text-sm leading-relaxed text-foreground">{scene.narration}</span>
                 <span className="truncate font-mono text-[11px] text-subtle">{scene.pexelsQuery}</span>
               </span>
               {clip ? (
                 // eslint-disable-next-line @next/next/no-img-element -- local 270px poster
-                <img src={clip.poster} alt="" loading="lazy" className="aspect-[9/16] w-8 rounded object-cover ring-1 ring-line" />
+                <img src={clip.poster} alt="" loading="lazy" className="aspect-[9/16] w-8 rounded object-cover ring-1 ring-border" />
               ) : (
                 <span className="w-8" />
               )}

@@ -42,7 +42,7 @@ export function MediaTile({
         onMouseLeave={stop}
         onFocus={start}
         onBlur={stop}
-        className="relative aspect-[9/16] w-full overflow-hidden rounded-lg bg-surface-2 ring-1 ring-line focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink"
+        className="relative aspect-[9/16] w-full overflow-hidden rounded-lg bg-secondary ring-1 ring-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         {background && (
           // eslint-disable-next-line @next/next/no-img-element -- local 270px poster

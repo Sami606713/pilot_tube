@@ -22,7 +22,7 @@ export function StepBar({ done, next }: { done: Step[]; next: Step }) {
           <span
             key={step}
             title={STEP_META[step].label}
-            className={`h-1.5 w-5 rounded-full ${isDone ? "bg-accent" : isNext ? "bg-line-strong" : "bg-surface-2 ring-1 ring-inset ring-line"}`}
+            className={`h-1.5 w-5 rounded-full ${isDone ? "bg-primary" : isNext ? "bg-border-strong" : "bg-secondary ring-1 ring-inset ring-border"}`}
           />
         );
       })}
@@ -33,23 +33,23 @@ export function StepBar({ done, next }: { done: Step[]; next: Step }) {
 /** Full step list for the Short page. */
 export function StepTrack({ done, next }: { done: Step[]; next: Step }) {
   return (
-    <ol className="grid grid-cols-3 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-6">
+    <ol className="grid grid-cols-3 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-6">
       {STEPS.map((step, i) => {
         const { label, Icon, soon } = STEP_META[step];
         const isDone = done.includes(step);
         const isNext = step === next && !isDone;
         return (
-          <li key={step} className={`flex items-center gap-2.5 bg-surface px-3 py-2.5 ${isNext ? "bg-surface-2" : ""}`}>
+          <li key={step} className={`flex items-center gap-2.5 bg-card px-3 py-2.5 ${isNext ? "bg-secondary" : ""}`}>
             <span
               className={`grid size-7 shrink-0 place-items-center rounded-full ${
-                isDone ? "bg-accent text-accent-fg" : isNext ? "border border-line-strong text-fg" : "border border-line text-subtle"
+                isDone ? "bg-primary text-primary-foreground" : isNext ? "border border-border-strong text-foreground" : "border border-border text-subtle"
               }`}
             >
               {isDone ? <Check size={14} weight="bold" /> : <Icon size={14} weight="bold" />}
             </span>
             <span className="flex min-w-0 flex-col leading-tight">
               <span className="font-mono text-[10px] text-subtle">{i + 1}</span>
-              <span className={`truncate text-sm ${isDone || isNext ? "font-medium text-fg" : "text-muted"}`}>
+              <span className={`truncate text-sm ${isDone || isNext ? "font-medium text-foreground" : "text-muted-foreground"}`}>
                 {label}
                 {soon && <span className="ml-1 hidden text-xs font-normal text-subtle xl:inline">soon</span>}
               </span>

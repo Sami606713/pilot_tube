@@ -1,5 +1,5 @@
 /**
- * Input props for the Short composition. PilotTube builds these in src/lib/render/props.ts
+ * Input props for the Short composition. PilotTube builds these in src/lib/render/render.ts
  * (using the same timeline rules as the dashboard preview) and passes them with --props.
  * All media paths are relative to the --public-dir (the Short's data folder).
  */

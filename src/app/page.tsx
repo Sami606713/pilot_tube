@@ -1,113 +1,98 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { PipelineCard } from "@/components/dashboard/pipeline-card";
+import { RecentVideos } from "@/components/dashboard/recent-videos";
+import { StatCard } from "@/components/dashboard/stat-card";
 import { RefreshNewsButton, StoryList } from "@/components/news-queue";
-import { PageHeader, SectionTitle } from "@/components/page-header";
-import { NewShortButton, ShortsList, ShortsListSkeleton } from "@/components/shorts-list";
+import { PageHeader } from "@/components/page-header";
+import { NewShortButton } from "@/components/shorts-list";
+import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { timeAgo } from "@/lib/format";
 import { unusedStories } from "@/lib/news/store";
 import { getOverview, listShorts } from "@/lib/shorts";
 
-export default function OverviewPage() {
+// Placeholder channel numbers until YouTube is connected through Composio. Shown with a "Sample" tag.
+const SAMPLE_CHANNEL = { views: "128.4K", viewsTrend: "+12.8%", subscribers: "4,820", subscribersTrend: "+8.2%" };
+
+export default function DashboardPage() {
   return (
     <>
-      <PageHeader
-        title="Overview"
-        description="Every Short starts from a real AI story published in the last two days."
-        actions={<NewShortButton />}
-      />
-      <Suspense fallback={<OverviewSkeleton />}>
-        <OverviewContent />
+      <PageHeader title="Dashboard" description="Manage your content from one place." actions={<NewShortButton />} />
+      <Suspense fallback={<DashboardSkeleton />}>
+        <DashboardContent />
       </Suspense>
     </>
   );
 }
 
-async function OverviewContent() {
+async function DashboardContent() {
   await connection();
   const shorts = listShorts();
   const overview = getOverview(shorts);
-  const stories = unusedStories(48, 6);
+  const stories = unusedStories(48, 5);
 
-  const stats = [
-    { label: "Shorts made", value: overview.total },
-    { label: "Rendered", value: overview.rendered },
-    { label: "Ready to render", value: overview.ready },
-    { label: "Stories in queue", value: overview.queuedStories },
-  ];
+  const inScripts = shorts.filter((s) => ["voice", "clips", "cards"].includes(s.next) && !s.done.includes("render")).length;
+  const readyToPublish = shorts.filter((s) => s.done.includes("render") && !s.done.includes("upload")).length;
 
   return (
-    <div className="flex flex-col gap-10">
-      <dl className="grid grid-cols-2 overflow-hidden rounded-xl border border-line bg-surface md:grid-cols-4">
-        {stats.map((stat, i) => (
-          <div
-            key={stat.label}
-            className={`flex flex-col gap-1 px-5 py-4 ${i % 2 === 1 ? "border-l border-line" : ""} ${i >= 2 ? "border-t border-line md:border-t-0" : ""} ${i === 2 ? "md:border-l" : ""}`}
-          >
-            <dt className="text-xs text-muted">{stat.label}</dt>
-            <dd className="font-mono text-2xl font-medium tabular-nums tracking-tight">{stat.value}</dd>
-          </div>
-        ))}
-      </dl>
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <StatCard label="Total views" value={SAMPLE_CHANNEL.views} trend={SAMPLE_CHANNEL.viewsTrend} sample />
+        <StatCard label="Subscribers" value={SAMPLE_CHANNEL.subscribers} trend={SAMPLE_CHANNEL.subscribersTrend} sample />
+        <StatCard label="Videos rendered" value={String(overview.rendered)} note={`${overview.total} Shorts made in total`} />
+        <StatCard label="In production" value={String(overview.total - overview.rendered)} note="Across all stages" />
+      </div>
 
-      <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-8">
-        <section className="lg:col-span-8">
-          <SectionTitle
-            action={
-              shorts.length > 6 && (
-                <Link href="/shorts" className="text-sm text-muted hover:text-fg">
-                  View all
-                </Link>
-              )
-            }
-          >
-            Recent Shorts
-          </SectionTitle>
-          <ShortsList shorts={shorts.slice(0, 6)} />
-        </section>
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+        <div className="flex flex-col gap-6 xl:col-span-8">
+          <PipelineCard
+            stages={[
+              { label: "Ideas", count: overview.queuedStories, href: "/news" },
+              { label: "Scripts", count: inScripts, href: "/shorts" },
+              { label: "Rendering", count: overview.ready, href: "/shorts" },
+              { label: "Ready to publish", count: readyToPublish, href: "/studio" },
+            ]}
+          />
+          <RecentVideos shorts={shorts.slice(0, 6)} />
+        </div>
 
-        <section className="lg:col-span-4">
-          <SectionTitle action={<RefreshNewsButton />}>Up next from the news</SectionTitle>
-          <div className="overflow-hidden rounded-xl border border-line bg-surface">
-            <StoryList stories={stories} empty="No unused stories. Refresh the news to pull the latest." />
-            <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-3 text-xs text-subtle">
-              <span>{overview.lastNewsAt ? `Fetched ${timeAgo(overview.lastNewsAt)}` : "Never fetched"}</span>
-              <Link href="/news" className="text-muted hover:text-fg">
-                Full queue
-              </Link>
-            </div>
-          </div>
-          {overview.sources.length > 0 && (
-            <div className="mt-6">
-              <h3 className="mb-2 text-xs text-muted">Stories by source, last 48 hours</h3>
-              <ul className="flex flex-wrap gap-1.5">
-                {overview.sources.map((s) => (
-                  <li key={s.source} className="rounded-full border border-line bg-surface px-2.5 py-1 text-xs text-muted">
-                    {s.source} <span className="ml-1 font-mono tabular-nums text-fg">{s.count}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </section>
+        <Card className="xl:col-span-4 xl:self-start">
+          <CardHeader>
+            <CardTitle className="text-base">Up next from the news</CardTitle>
+            <CardAction>
+              <RefreshNewsButton />
+            </CardAction>
+          </CardHeader>
+          <CardContent className="px-0">
+            <StoryList stories={stories} empty="No unused stories. Refresh to pull the latest AI news." />
+          </CardContent>
+          <CardFooter className="justify-between text-xs text-muted-foreground">
+            <span>{overview.lastNewsAt ? `Fetched ${timeAgo(overview.lastNewsAt)}` : "Never fetched"}</span>
+            <Link href="/news" className="hover:text-foreground">
+              Full queue
+            </Link>
+          </CardFooter>
+        </Card>
       </div>
     </div>
   );
 }
 
-function OverviewSkeleton() {
+function DashboardSkeleton() {
   return (
-    <div className="flex flex-col gap-10" aria-busy="true">
-      <div className="skeleton h-[82px] rounded-xl" />
-      <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-8">
-        <div className="lg:col-span-8">
-          <div className="mb-3 h-9" />
-          <ShortsListSkeleton />
-        </div>
-        <div className="lg:col-span-4">
-          <div className="mb-3 h-9" />
+    <div className="flex flex-col gap-6" aria-busy="true" aria-label="Loading dashboard">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div key={i} className="skeleton h-[118px] rounded-xl" />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+        <div className="flex flex-col gap-6 xl:col-span-8">
+          <div className="skeleton h-56 rounded-xl" />
           <div className="skeleton h-80 rounded-xl" />
         </div>
+        <div className="skeleton h-96 rounded-xl xl:col-span-4" />
       </div>
     </div>
   );

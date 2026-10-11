@@ -62,7 +62,7 @@ export function ActionButton({ endpoint, method = "POST", children, pendingLabel
         )}
       </button>
       {error && (
-        <p role="alert" className="flex max-w-md items-start gap-1.5 text-xs text-danger">
+        <p role="alert" className="flex max-w-md items-start gap-1.5 text-xs text-destructive">
           <WarningCircle size={14} weight="bold" className="mt-px shrink-0" />
           <span>{error}</span>
         </p>

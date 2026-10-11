@@ -12,19 +12,19 @@ export function RefreshNewsButton() {
 }
 
 export function StoryList({ stories, empty }: { stories: StoryRow[]; empty: string }) {
-  if (stories.length === 0) return <p className="px-4 py-8 text-sm text-muted">{empty}</p>;
+  if (stories.length === 0) return <p className="px-4 py-8 text-sm text-muted-foreground">{empty}</p>;
   return (
-    <ul className="divide-y divide-line">
+    <ul className="divide-y divide-border">
       {stories.map((story) => (
         <li key={story.id}>
           <a
             href={story.url}
             target="_blank"
             rel="noreferrer"
-            className="group flex items-start justify-between gap-3 px-4 py-3 transition-colors hover:bg-surface-2/60"
+            className="group flex items-start justify-between gap-3 px-4 py-3 transition-colors hover:bg-secondary/60"
           >
             <span className="flex min-w-0 flex-col gap-1">
-              <span className="line-clamp-2 text-sm leading-snug text-fg">{story.title}</span>
+              <span className="line-clamp-2 text-sm leading-snug text-foreground">{story.title}</span>
               <span className="text-xs text-subtle">
                 {story.source} <span>/</span> {timeAgo(story.published_at)}
               </span>
