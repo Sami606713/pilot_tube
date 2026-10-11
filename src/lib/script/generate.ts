@@ -4,7 +4,7 @@ import { agnes } from "@/lib/agnes";
 import { getDb } from "@/lib/db";
 import { env } from "@/lib/env";
 import { fetchArticleText } from "@/lib/news/article";
-import { markStorySkipped, markStoryUsed, recentlyUsedTitles, refreshNews, unusedStories, type StoryRow } from "@/lib/news/store";
+import { getStory, markStorySkipped, markStoryUsed, recentlyUsedTitles, refreshNews, unusedStories, type StoryRow } from "@/lib/news/store";
 import { fullNarration, shortScriptSchema, wordCount, type ShortScript } from "./schema";
 
 // ~2.5 words per second of speech → 30–45 second Short.
@@ -133,12 +133,30 @@ export type GeneratedScript = {
   articleChars: number;
 };
 
-/** Refresh the news, let Agnes pick the best unused story, read the article, and save a Shorts script for it. */
-export async function generateScript(): Promise<GeneratedScript> {
-  await refreshNews();
+/** The story the user picked on the Research page; its article must be readable so facts are real. */
+async function chosenStory(storyId: number): Promise<{ story: StoryRow; article: string }> {
+  const story = getStory(storyId);
+  if (!story) throw new Error(`Story #${storyId} not found`);
+  if (story.used_at) throw new Error("A Short was already made from this story");
+  const article = await fetchArticleText(story.url);
+  if (article.length < MIN_ARTICLE_CHARS) {
+    markStorySkipped(story.id);
+    throw new Error("This article can't be read (paywall or bot block), so its facts can't be checked. Pick another story.");
+  }
+  return { story, article };
+}
+
+/**
+ * Write and save a Shorts script. With `storyId`, use that story; otherwise refresh the news
+ * and let Agnes pick the best unused story with a readable article.
+ */
+export async function generateScript(opts: { storyId?: number } = {}): Promise<GeneratedScript> {
   let story: StoryRow | undefined;
   let article = "";
   const skipped: string[] = [];
+
+  if (opts.storyId !== undefined) ({ story, article } = await chosenStory(opts.storyId));
+  else await refreshNews();
 
   for (let pick = 0; pick < MAX_STORY_PICKS && !story; pick++) {
     const stories = unusedStories();

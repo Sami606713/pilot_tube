@@ -4,6 +4,7 @@ import { getRender, type RenderResult } from "@/lib/render/render";
 import { getDb } from "@/lib/db";
 import { getClips, type Clip } from "@/lib/footage/clips";
 import { fullNarration, wordCount, type ShortScript } from "@/lib/script/schema";
+import { unusedStories } from "@/lib/news/store";
 import { getVoiceover, type Voiceover } from "@/lib/voice/voiceover";
 
 /** Pipeline steps in order. Render and upload arrive in later phases. */
@@ -130,9 +131,8 @@ export type Overview = {
 export function getOverview(shorts: ShortSummary[]): Overview {
   const db = getDb();
   const since = new Date(Date.now() - 48 * 3600_000).toISOString();
-  const queued = db
-    .prepare(`SELECT COUNT(*) AS n FROM stories WHERE used_at IS NULL AND skipped_at IS NULL AND published_at >= ?`)
-    .get(since) as { n: number };
+  // Same AI-only rule as the story picker, so the dashboard count matches what can become a Short.
+  const queued = { n: unusedStories(48, 10_000).length };
   const sources = db
     .prepare(
       `SELECT source, COUNT(*) AS count FROM stories WHERE published_at >= ? GROUP BY source ORDER BY count DESC`,

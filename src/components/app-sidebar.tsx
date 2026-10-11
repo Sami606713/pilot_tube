@@ -35,13 +35,13 @@ type NavItem = { href: string; label: string; Icon: ComponentType<{ className?: 
 
 const WORKSPACE: NavItem[] = [
   { href: "/", label: "Overview", Icon: SquaresFour },
-  { href: "/news", label: "Research", Icon: Lightbulb },
+  { href: "/research", label: "Research", Icon: Lightbulb },
   { href: "/planner", label: "Planner", Icon: CalendarBlank, soon: true },
   { href: "/shorts", label: "Scripts", Icon: Article },
   { href: "/studio", label: "Video studio", Icon: FilmStrip },
-  { href: "/thumbnails", label: "Thumbnails", Icon: ImageSquare, soon: true },
+  { href: "/thumbnails", label: "Thumbnails", Icon: ImageSquare },
   { href: "/publishing", label: "Publishing", Icon: PaperPlaneTilt, soon: true },
-  { href: "/analytics", label: "Analytics", Icon: ChartLineUp, soon: true },
+  { href: "/analytics", label: "Analytics", Icon: ChartLineUp },
   { href: "/workflows", label: "Workflows", Icon: FlowArrow, soon: true },
 ];
 

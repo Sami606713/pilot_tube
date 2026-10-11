@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowSquareOut, DownloadSimple, FilmSlate, FilmStrip, Microphone, Sparkle, WarningCircle } from "@phosphor-icons/react/dist/ssr";
+import { ArrowLeft, ArrowSquareOut, DownloadSimple, FilmSlate, FilmStrip, ImageSquare, Microphone, Sparkle, WarningCircle } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
@@ -11,6 +11,7 @@ import { PreviewPlayer, PreviewProvider, SceneList, type PreviewData } from "@/c
 import { StepTrack } from "@/components/step-track";
 import { clock, parseDbDate, timeAgo } from "@/lib/format";
 import { getShort, type ShortDetail } from "@/lib/shorts";
+import { listThumbnails } from "@/lib/thumbnails/thumbnails";
 
 export default function ShortPage({ params }: PageProps<"/shorts/[id]">) {
   return (
@@ -70,6 +71,13 @@ async function ShortView({ id }: { id: number }) {
     render !== null &&
     [short.voiceover?.createdAt, ...short.cards.map((c) => c.createdAt)].some((t) => t && parseDbDate(t).getTime() > renderedAt);
   const canRender = Boolean(short.voiceover) && short.clips.length >= short.script.scenes.length;
+  // Chosen thumbnail per format, else the newest one.
+  const thumbs = listThumbnails(short.id);
+  const shownThumbs = (["short", "wide"] as const).flatMap((format) => {
+    const ofFormat = thumbs.filter((t) => t.format === format);
+    const pick = ofFormat.find((t) => t.selected) ?? ofFormat[0];
+    return pick ? [pick] : [];
+  });
   const lastScene = short.clips.length - 1;
 
   return (
@@ -287,6 +295,37 @@ async function ShortView({ id }: { id: number }) {
                     ? "Remotion joins the clips, voice, captions and cards into the final 1080 by 1920 MP4. Takes a few minutes."
                     : "Make the voice and find clips first. Cards are optional but recommended."}
                 </p>
+              )}
+            </Section>
+
+            <Section
+              title="Thumbnail"
+              icon={<ImageSquare size={16} />}
+              action={
+                <Link href={`/thumbnails?short=${short.id}`} className={`${buttonStyles.base} ${buttonStyles.secondary}`}>
+                  <ImageSquare size={16} /> {thumbs.length ? "Open thumbnails" : "Make thumbnails"}
+                </Link>
+              }
+            >
+              {shownThumbs.length ? (
+                <div className="flex flex-wrap items-end gap-4">
+                  {shownThumbs.map((t) => (
+                    <figure key={t.id} className="flex flex-col gap-1.5">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- local generated JPG */}
+                      <img
+                        src={`/api/thumbnails/${t.id}/image`}
+                        alt={`${t.concept}: ${t.headline}`}
+                        loading="lazy"
+                        className={`rounded-lg object-cover ring-1 ring-border ${t.format === "short" ? "aspect-[9/16] w-32" : "aspect-video w-64"}`}
+                      />
+                      <figcaption className="text-xs text-muted-foreground">
+                        {t.format === "short" ? "9:16" : "16:9"} / {t.selected ? "chosen" : "newest"}
+                      </figcaption>
+                    </figure>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Agnes Image 2.5 Flash draws 3 picture ideas, PilotTube adds the headline. Free right now.</p>
               )}
             </Section>
           </div>

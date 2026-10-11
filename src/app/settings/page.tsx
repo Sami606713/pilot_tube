@@ -13,7 +13,7 @@ const SERVICES = [
   { name: "Agnes AI", env: "AGNES_API_KEY", use: "Writes the scripts" },
   { name: "Deepgram", env: "DEEPGRAM_API_KEY", use: "Voice and word timings" },
   { name: "Pexels", env: "PEXELS_API_KEY", use: "Stock clips" },
-  { name: "Composio", env: "COMPOSIO_API_KEY", use: "YouTube publishing (next step)" },
+  { name: "Composio", env: "COMPOSIO_API_KEY", use: "YouTube channel data and analytics" },
 ];
 
 export default function SettingsPage() {

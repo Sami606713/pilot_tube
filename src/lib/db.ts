@@ -78,12 +78,32 @@ export function getDb(): DatabaseSync {
       render_seconds REAL NOT NULL,
       created_at     TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS thumbnails (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      script_id       INTEGER NOT NULL REFERENCES scripts(id),
+      format          TEXT NOT NULL,
+      concept         TEXT NOT NULL,
+      prompt          TEXT NOT NULL,
+      headline        TEXT NOT NULL,
+      background_path TEXT NOT NULL,
+      file_path       TEXT NOT NULL,
+      selected        INTEGER NOT NULL DEFAULT 0,
+      created_at      TEXT NOT NULL
+    );
   `);
 
   // Columns added after the first version of the schema.
-  const storyColumns = db.prepare("PRAGMA table_info(stories)").all() as { name: string }[];
-  if (!storyColumns.some((c) => c.name === "skipped_at")) {
-    db.exec("ALTER TABLE stories ADD COLUMN skipped_at TEXT");
+  const storyColumns = new Set((db.prepare("PRAGMA table_info(stories)").all() as { name: string }[]).map((c) => c.name));
+  const added: [string, string][] = [
+    ["skipped_at", "TEXT"],
+    // Hacker News popularity and a preview image, for the Research page.
+    ["points", "INTEGER"],
+    ["comments", "INTEGER"],
+    ["image", "TEXT"],
+  ];
+  for (const [name, type] of added) {
+    if (!storyColumns.has(name)) db.exec(`ALTER TABLE stories ADD COLUMN ${name} ${type}`);
   }
 
   return db;
