@@ -43,6 +43,40 @@ export async function runYouTubeTool<T = Record<string, unknown>>(slug: string, 
     connectedAccountId: await youtubeAccountId(),
     arguments: args,
   });
-  if (!result.successful) throw new Error(`${slug} failed: ${result.error ?? "unknown error"}`);
+  if (!result.successful) throw new Error(youtubeError(slug, String(result.error ?? "unknown error")));
   return result.data as T;
+}
+
+const QUOTA_MESSAGE =
+  "YouTube's daily API limit is used up. It resets at midnight Pacific time (about 12 PM in Pakistan). Connecting YouTube in Composio with your own Google app gives PilotTube its own limit.";
+
+function youtubeError(slug: string, message: string): string {
+  if (/exceeded your .*quota|quotaExceeded/i.test(message)) return QUOTA_MESSAGE;
+  // Composio reports a used-up quota on the channel video list as "Access forbidden".
+  if (/Access forbidden when fetching channel/i.test(message)) return `YouTube refused the request, most likely because the daily API limit is used up. ${QUOTA_MESSAGE.split(". ").slice(1).join(". ")}`;
+  return `${slug} failed: ${message}`;
+}
+
+/**
+ * Call any YouTube API endpoint (full URL) with the connected account's login, for things
+ * Composio has no tool for, like scheduling. Throws with YouTube's message on a non-2xx reply.
+ */
+export async function youtubeApi<T = Record<string, unknown>>(
+  method: "GET" | "PUT" | "POST" | "DELETE",
+  url: string,
+  query: Record<string, string>,
+  body?: unknown,
+): Promise<T> {
+  const res = await composio().tools.proxyExecute({
+    endpoint: url,
+    method,
+    connectedAccountId: await youtubeAccountId(),
+    parameters: Object.entries(query).map(([name, value]) => ({ in: "query" as const, name, value })),
+    body,
+  });
+  if (res.status < 200 || res.status >= 300) {
+    const data = res.data as { error?: { message?: string } } | undefined;
+    throw new Error(youtubeError(url, data?.error?.message ?? `HTTP ${res.status}`));
+  }
+  return res.data as T;
 }

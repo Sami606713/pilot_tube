@@ -159,7 +159,7 @@ async function PipelineSection() {
   const overview = getOverview(shorts);
   const inScripts = shorts.filter(
     (s) =>
-      ["voice", "clips", "cards"].includes(s.next) &&
+      ["voice", "images", "cards"].includes(s.next) &&
       !s.done.includes("render"),
   ).length;
   const readyToPublish = shorts.filter(

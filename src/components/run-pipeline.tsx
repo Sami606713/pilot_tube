@@ -7,7 +7,7 @@ import { buttonStyles } from "@/components/button-styles";
 
 const ENDPOINTS = {
   voice: { path: "voice", label: "Making voice" },
-  clips: { path: "footage", label: "Finding clips" },
+  images: { path: "images?missing=1", label: "Drawing images" },
   cards: { path: "cards", label: "Rendering cards" },
   render: { path: "render", label: "Rendering video" },
 } as const;

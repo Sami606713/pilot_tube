@@ -56,7 +56,7 @@ async function RenderedGrid() {
           <li key={short.id} className="flex flex-col gap-2">
             <video
               src={`/api/script/${short.id}/video?v=${v}`}
-              poster={short.thumbId ? `/api/script/${short.id}/clip/0/poster?v=${short.thumbId}` : undefined}
+              poster={short.thumbUrl ?? undefined}
               controls
               playsInline
               preload="none"

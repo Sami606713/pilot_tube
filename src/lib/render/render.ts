@@ -4,9 +4,11 @@ import { mkdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import type { ShortProps } from "@/remotion/types";
+import { copyFile } from "node:fs/promises";
 import { getCards } from "@/lib/cards/render";
+import { getShortMusic } from "@/lib/music/short-music";
 import { getDb } from "@/lib/db";
-import { getClips } from "@/lib/footage/clips";
+import { getSceneVisuals } from "@/lib/scenes/visuals";
 import { captionPages, cardSchedule } from "@/lib/timeline";
 import { getVoiceover, videoDir } from "@/lib/voice/voiceover";
 
@@ -34,8 +36,8 @@ type RenderRow = { script_id: number; file_path: string; duration: number; size_
 export function buildProps(scriptId: number): ShortProps {
   const voiceover = getVoiceover(scriptId);
   if (!voiceover) throw new Error("Make the voice first: the video's length and captions come from it");
-  const clips = getClips(scriptId);
-  if (clips.length < voiceover.scenes.length) throw new Error("Find clips first: every scene needs a clip");
+  const visuals = getSceneVisuals(scriptId);
+  if (visuals.length < voiceover.scenes.length) throw new Error("Make the scene images first: every scene needs a picture");
 
   const dir = videoDir(scriptId);
   const relative = (file: string) => path.relative(dir, file).split(path.sep).join("/");
@@ -47,10 +49,15 @@ export function buildProps(scriptId: number): ShortProps {
     voice: relative(voiceover.audioPath),
     accent: process.env.CARD_ACCENT || "#7CFF6B",
     scenes: voiceover.scenes.map((scene, i) => {
-      const clip = clips.find((c) => c.sceneIndex === i)!;
-      return { start: scene.start, end: scene.end, clip: relative(clip.filePath), clipDuration: clip.duration };
+      const visual = visuals.find((v) => v.sceneIndex === i)!;
+      return { start: scene.start, end: scene.end, media: { kind: visual.kind, src: relative(visual.filePath), duration: visual.duration } };
     }),
     captions: captionPages(voiceover.words),
+    // The track is copied into the Short's folder at render time (Remotion only reads its public dir).
+    music: (() => {
+      const { track } = getShortMusic(scriptId);
+      return track ? { src: `music${path.extname(track.filePath)}`, speech: mergeSpeech(captionPages(voiceover.words)) } : null;
+    })(),
     cards: slots.map((slot) => ({
       kind: slot.kind,
       src: relative(cards.find((c) => c.name === slot.name)!.filePath),
@@ -60,9 +67,22 @@ export function buildProps(scriptId: number): ShortProps {
   };
 }
 
+/** Caption pages that touch (or nearly) become one speech range, so music doesn't bob between words. */
+function mergeSpeech(pages: { start: number; end: number }[]): { start: number; end: number }[] {
+  const out: { start: number; end: number }[] = [];
+  for (const p of pages) {
+    const last = out[out.length - 1];
+    if (last && p.start - last.end < 0.4) last.end = Math.max(last.end, p.end);
+    else out.push({ start: p.start, end: p.end });
+  }
+  return out;
+}
+
 /** Render the final 1080x1920 MP4 with Remotion and record it. */
 export async function renderShort(scriptId: number): Promise<RenderResult> {
   const props = buildProps(scriptId);
+  const { track } = getShortMusic(scriptId);
+  if (track && props.music) await copyFile(track.filePath, path.join(videoDir(scriptId), props.music.src));
   await mkdir(RENDERS_DIR, { recursive: true });
 
   const propsFile = path.join(RENDERS_DIR, `${scriptId}.props.json`);

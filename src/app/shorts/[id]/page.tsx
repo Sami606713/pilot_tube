@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowSquareOut, DownloadSimple, FilmSlate, FilmStrip, ImageSquare, Microphone, Sparkle, WarningCircle } from "@phosphor-icons/react/dist/ssr";
+import { ArrowLeft, ArrowSquareOut, DownloadSimple, FilmSlate, ImageSquare, Microphone, MonitorPlay, MusicNotes, Sparkle, WarningCircle } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
@@ -6,10 +6,18 @@ import { Suspense, type ReactNode } from "react";
 import { ActionButton } from "@/components/action-button";
 import { buttonStyles } from "@/components/button-styles";
 import { MediaTile } from "@/components/media-tile";
+import { ShortMusicPicker } from "@/components/music/short-music-picker";
+import { SceneImageTile } from "@/components/scene-image-tile";
 import { RunPipelineButton } from "@/components/run-pipeline";
 import { PreviewPlayer, PreviewProvider, SceneList, type PreviewData } from "@/components/short-preview";
 import { StepTrack } from "@/components/step-track";
 import { clock, parseDbDate, timeAgo } from "@/lib/format";
+import { getMotionGraphics } from "@/lib/motion/render";
+import { listTracks } from "@/lib/music/library";
+import { getShortMusic } from "@/lib/music/short-music";
+import type { TimedBeat } from "@/lib/motion/plan";
+import { visualUrls } from "@/lib/scenes/visuals";
+import { sceneVisual } from "@/lib/script/schema";
 import { getShort, type ShortDetail } from "@/lib/shorts";
 import { listThumbnails } from "@/lib/thumbnails/thumbnails";
 
@@ -31,15 +39,30 @@ function previewData(short: ShortDetail): PreviewData {
     duration: short.voiceover?.duration ?? short.duration,
     words: short.voiceover?.words ?? [],
     scenes: short.voiceover?.scenes ?? [],
-    clips: short.script.scenes.map((_, i) => {
-      const clip = short.clips.find((c) => c.sceneIndex === i);
-      return clip ? { src: `${base}/clip/${i}?v=${clip.pexelsId}`, poster: `${base}/clip/${i}/poster?v=${clip.pexelsId}` } : null;
+    visuals: short.script.scenes.map((_, i) => {
+      const visual = short.visuals.find((v) => v.sceneIndex === i);
+      return visual ? { kind: visual.kind, ...visualUrls(short.id, visual) } : null;
     }),
     cards: short.cards.map((c) => {
       const v = encodeURIComponent(c.createdAt);
       return { name: c.name, kind: c.kind, src: `${base}/card/${c.name}?v=${v}`, poster: `${base}/card/${c.name}/poster?v=${v}` };
     }),
   };
+}
+
+/** Short text summary of a motion graphics screen, for the plan list. */
+function beatSummary(b: TimedBeat): string {
+  switch (b.type) {
+    case "keyword": return b.sub ? `${b.text} (${b.sub})` : b.text;
+    case "number": return `${b.value} ${b.label}`;
+    case "quote": return b.source ? `"${b.text}" / ${b.source}` : `"${b.text}"`;
+    case "vs": return `${b.left} vs ${b.right}`;
+    case "timeline": return b.steps.join(" > ");
+    case "list": return `${b.title}: ${b.items.join(", ")}`;
+    case "statement": return b.text;
+    case "question": return b.text;
+    case "outro": return b.text;
+  }
 }
 
 function Section({ title, icon, action, children }: { title: string; icon: ReactNode; action?: ReactNode; children: ReactNode }) {
@@ -63,14 +86,17 @@ async function ShortView({ id }: { id: number }) {
   if (!short) notFound();
 
   const base = `/api/script/${short.id}`;
-  const missing = (["voice", "clips", "cards", "render"] as const).filter((s) => !short.done.includes(s));
+  const missing = (["voice", "images", "cards", "render"] as const).filter((s) => !short.done.includes(s));
   const render = short.render;
   // A render is stale when the voice or cards were remade after it.
   const renderedAt = render ? parseDbDate(render.createdAt).getTime() : 0;
   const stale =
     render !== null &&
     [short.voiceover?.createdAt, ...short.cards.map((c) => c.createdAt)].some((t) => t && parseDbDate(t).getTime() > renderedAt);
-  const canRender = Boolean(short.voiceover) && short.clips.length >= short.script.scenes.length;
+  const motion = getMotionGraphics(short.id);
+  const music = getShortMusic(short.id);
+  const tracks = listTracks();
+  const canRender = Boolean(short.voiceover) && short.visuals.length >= short.script.scenes.length;
   // Chosen thumbnail per format, else the newest one.
   const thumbs = listThumbnails(short.id);
   const shownThumbs = (["short", "wide"] as const).flatMap((format) => {
@@ -78,7 +104,7 @@ async function ShortView({ id }: { id: number }) {
     const pick = ofFormat.find((t) => t.selected) ?? ofFormat[0];
     return pick ? [pick] : [];
   });
-  const lastScene = short.clips.length - 1;
+  const lastScene = short.visuals.length - 1;
 
   return (
     <PreviewProvider data={previewData(short)}>
@@ -128,8 +154,79 @@ async function ShortView({ id }: { id: number }) {
                 </a>
                 . Click a scene to jump the preview there.
               </p>
-              <SceneList scenes={short.script.scenes} />
+              <SceneList scenes={short.script.scenes.map((sc) => ({ narration: sc.narration, visual: sceneVisual(sc) }))} />
             </section>
+
+            <Section
+              title="Motion graphics"
+              icon={<MonitorPlay size={16} />}
+              action={
+                <ActionButton endpoint={`${base}/motion`} pendingLabel="Making motion graphics" icon={<MonitorPlay size={16} />} variant={motion ? "secondary" : "primary"}>
+                  {motion ? "Remake" : "Make motion graphics"}
+                </ActionButton>
+              }
+            >
+              {motion ? (
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-[minmax(0,220px)_1fr]">
+                  <video
+                    src={`${base}/motion/video?v=${encodeURIComponent(motion.createdAt)}`}
+                    poster={`${base}/motion/poster?v=${encodeURIComponent(motion.createdAt)}`}
+                    controls
+                    playsInline
+                    preload="metadata"
+                    className="aspect-[9/16] w-full rounded-xl bg-[#0b0b0d] ring-1 ring-border"
+                  />
+                  <div className="flex min-w-0 flex-col gap-3">
+                    <p className="text-xs text-muted-foreground">
+                      {motion.duration}s, {motion.beats.length} screens, made {timeAgo(motion.createdAt)} in {Math.round(motion.renderSeconds)}s. Made only from the script.
+                    </p>
+                    <ol className="flex flex-col gap-1.5">
+                      {motion.beats.map((b, i) => (
+                        <li key={i} className="grid grid-cols-[3rem_5.5rem_1fr] items-baseline gap-2 text-sm">
+                          <span className="font-mono text-xs text-subtle tabular-nums">{clock(b.start)}</span>
+                          <span className="text-xs text-brand capitalize">{b.type}</span>
+                          <span className="min-w-0 truncate" title={b.line}>{beatSummary(b)}</span>
+                        </li>
+                      ))}
+                    </ol>
+                    <a href={`${base}/motion/video?download=1&v=${encodeURIComponent(motion.createdAt)}`} className={`${buttonStyles.base} ${buttonStyles.secondary} w-fit`}>
+                      <DownloadSimple size={16} /> Download MP4
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Turns the script into a motion graphics video with HyperFrames: one animated screen per line (keywords, numbers, quotes, VS, timelines, lists). Script only, about a minute.
+                </p>
+              )}
+            </Section>
+
+            <Section title="Music" icon={<MusicNotes size={16} />}>
+              {tracks.length ? (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    {music.track
+                      ? `Playing "${music.track.title}" quietly under the video. It gets softer while the voice talks.`
+                      : "No music yet. Pick by mood lets PilotTube read the script and choose a matching track."}
+                  </p>
+                  <ShortMusicPicker
+                    shortId={short.id}
+                    tracks={tracks.map((t) => ({ id: t.id, title: t.title, mood: t.mood }))}
+                    trackId={music.track?.id ?? null}
+                    mood={music.mood}
+                    attribution={music.track?.license === "cc" ? music.track.attribution : null}
+                  />
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Your music library is empty.{" "}
+                  <Link href="/music" className="text-foreground underline decoration-border-strong underline-offset-2 hover:text-brand">
+                    Add tracks from the YouTube Audio Library
+                  </Link>{" "}
+                  and PilotTube will pick one that fits each script.
+                </p>
+              )}
+            </Section>
 
             <Section
               title="Voice"
@@ -161,41 +258,47 @@ async function ShortView({ id }: { id: number }) {
             </Section>
 
             <Section
-              title="Clips"
-              icon={<FilmStrip size={16} />}
+              title="Images"
+              icon={<ImageSquare size={16} />}
               action={
-                <ActionButton endpoint={`${base}/footage`} pendingLabel="Finding clips" icon={<FilmStrip size={16} />}>
-                  {short.clips.length ? "Find new clips" : "Find clips"}
-                </ActionButton>
+                <div className="flex flex-wrap items-start gap-2">
+                  {short.visuals.some((v) => v.kind === "image") && short.visuals.filter((v) => v.kind === "image").length < short.script.scenes.length && (
+                    <ActionButton endpoint={`${base}/images?missing=1`} pendingLabel="Filling in" icon={<ImageSquare size={16} />} variant="primary">
+                      Fill missing images
+                    </ActionButton>
+                  )}
+                  <ActionButton endpoint={`${base}/images`} pendingLabel="Drawing images" icon={<ImageSquare size={16} />}>
+                    {short.visuals.length ? "Redraw all" : "Make images"}
+                  </ActionButton>
+                </div>
               }
             >
-              {short.clips.length ? (
-                <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 xl:grid-cols-5">
-                  {short.clips.map((clip) => {
-                    const v = clip.pexelsId;
-                    const tooShort = clip.sceneDuration > 0 && clip.duration < clip.sceneDuration;
-                    return (
-                      <MediaTile
-                        key={clip.sceneIndex}
-                        poster={`${base}/clip/${clip.sceneIndex}/poster?v=${v}`}
-                        video={`${base}/clip/${clip.sceneIndex}?v=${v}`}
-                        label={`Scene ${clip.sceneIndex + 1}: ${clip.query}`}
-                      >
-                        <span className="truncate text-xs font-medium">{clip.query}</span>
-                        <span className={`text-[11px] ${tooShort ? "text-destructive" : "text-subtle"}`}>
-                          {clip.duration}s clip{tooShort ? ", will loop" : ""}
-                        </span>
-                        <a href={clip.pexelsUrl} target="_blank" rel="noreferrer" className="truncate text-[11px] text-subtle hover:text-foreground">
-                          {clip.author}
-                        </a>
-                      </MediaTile>
-                    );
-                  })}
+              {short.visuals.length ? (
+                <div className="flex flex-col gap-3">
+                  {short.visuals.some((v) => v.kind === "video") && (
+                    <p className="text-xs text-muted-foreground">Some scenes still use stock clips from before. Press Redraw all to replace them with pictures.</p>
+                  )}
+                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 xl:grid-cols-5">
+                    {short.visuals.map((visual) => {
+                      const urls = visualUrls(short.id, visual);
+                      return visual.kind === "image" ? (
+                        <SceneImageTile key={visual.sceneIndex} shortId={short.id} sceneIndex={visual.sceneIndex} src={urls.src} poster={urls.poster} prompt={visual.prompt} />
+                      ) : (
+                        <MediaTile key={visual.sceneIndex} poster={urls.poster} video={urls.src} label={`Scene ${visual.sceneIndex + 1}: stock clip`}>
+                          <span className="text-xs font-medium">{visual.sceneIndex + 1}. Stock clip</span>
+                          {visual.credit && (
+                            <a href={visual.credit.url} target="_blank" rel="noreferrer" className="truncate text-[11px] text-subtle hover:text-foreground">
+                              {visual.credit.author}
+                            </a>
+                          )}
+                        </MediaTile>
+                      );
+                    })}
+                  </div>
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  One vertical Pexels clip per scene, never reused within 30 days.
-                  {!short.voiceover && " Make the voice first so clips match the real scene lengths."}
+                  Agnes Image 2.5 Flash draws one picture per scene in a single shared style, about 30 to 40 seconds for the whole Short. Free right now.
                 </p>
               )}
             </Section>
@@ -213,8 +316,8 @@ async function ShortView({ id }: { id: number }) {
                 <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 xl:grid-cols-5">
                   {short.cards.map((card, i) => {
                     const v = encodeURIComponent(card.createdAt);
-                    const bgScene = short.clips.length === 0 ? null : card.kind === "hook" ? 0 : card.kind === "outro" ? lastScene : Math.min(i, Math.max(lastScene - 1, 0));
-                    const bgClip = bgScene === null ? undefined : short.clips.find((c) => c.sceneIndex === bgScene);
+                    const bgScene = short.visuals.length === 0 ? null : card.kind === "hook" ? 0 : card.kind === "outro" ? lastScene : Math.min(i, Math.max(lastScene - 1, 0));
+                    const bgVisual = bgScene === null ? undefined : short.visuals.find((v) => v.sceneIndex === bgScene);
                     const text = Object.entries(card.variables)
                       .filter(([k, val]) => k !== "accent" && val)
                       .map(([, val]) => val)
@@ -224,7 +327,7 @@ async function ShortView({ id }: { id: number }) {
                         key={card.name}
                         poster={`${base}/card/${card.name}/poster?v=${v}`}
                         video={`${base}/card/${card.name}?v=${v}`}
-                        background={bgClip ? `${base}/clip/${bgClip.sceneIndex}/poster?v=${bgClip.pexelsId}` : undefined}
+                        background={bgVisual ? visualUrls(short.id, bgVisual).poster : undefined}
                         label={`${card.name} card: ${text}`}
                       >
                         <span className="text-xs font-medium capitalize">{card.name.replace("-", " ")}</span>

@@ -47,9 +47,9 @@ export function RecentVideos({ shorts }: { shorts: ShortSummary[] }) {
                 <li key={short.id} className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-secondary/60">
                   <Link href={`/shorts/${short.id}`} className="flex min-w-0 flex-1 items-center gap-3">
                     <span className="relative grid aspect-[9/16] w-9 shrink-0 place-items-center overflow-hidden rounded-md bg-secondary ring-1 ring-border">
-                      {short.thumbId ? (
+                      {short.thumbUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element -- local 270px poster
-                        <img src={`/api/script/${short.id}/clip/0/poster?v=${short.thumbId}`} alt="" loading="lazy" className="size-full object-cover" />
+                        <img src={short.thumbUrl} alt="" loading="lazy" className="size-full object-cover" />
                       ) : (
                         <FilmSlate className="size-4 text-muted-foreground" />
                       )}

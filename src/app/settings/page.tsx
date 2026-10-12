@@ -10,9 +10,8 @@ export const metadata: Metadata = { title: "Settings" };
 
 /** Which service each pipeline step needs; only whether a key is set is shown, never the key. */
 const SERVICES = [
-  { name: "Agnes AI", env: "AGNES_API_KEY", use: "Writes the scripts" },
+  { name: "Agnes AI", env: "AGNES_API_KEY", use: "Scripts, scene images and thumbnails" },
   { name: "Deepgram", env: "DEEPGRAM_API_KEY", use: "Voice and word timings" },
-  { name: "Pexels", env: "PEXELS_API_KEY", use: "Stock clips" },
   { name: "Composio", env: "COMPOSIO_API_KEY", use: "YouTube channel data and analytics" },
 ];
 
