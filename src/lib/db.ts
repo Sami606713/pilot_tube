@@ -40,6 +40,29 @@ export function getDb(): DatabaseSync {
       created_at  TEXT NOT NULL,
       updated_at  TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS videos (
+      script_id  INTEGER PRIMARY KEY,
+      data       TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS brands (
+      domain TEXT PRIMARY KEY,
+      data   TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS music_tracks (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      title       TEXT NOT NULL,
+      artist      TEXT,
+      mood        TEXT NOT NULL,
+      license     TEXT NOT NULL,
+      attribution TEXT,
+      file_path   TEXT NOT NULL,
+      duration    REAL NOT NULL,
+      created_at  TEXT NOT NULL
+    );
   `);
   return db;
 }

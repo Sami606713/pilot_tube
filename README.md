@@ -51,3 +51,20 @@ Dramatic, storytelling Shorts scripts of 50-58 seconds (125-138 words at ~2.4 wo
 - **Editing**: edit any field by hand, or "Rewrite" one line with an optional instruction. Changed lines are marked "not re-checked".
 - **Export**: copy the voice-over, download CSV (for an editor) or .txt; YouTube title, description with source links, hashtags.
 - Code: `src/lib/scripts/` (engine, store, types), `src/app/api/scripts`, table `scripts`.
+
+## Video studio (`/studio`), part 1 of 3
+
+Pick a finished script → **Make video**: Deepgram Aura-2 "Zeus" voice (deep male) + Nova-3 word timings aligned to the script → Agnes writes Pexels search words per line → 3 portrait clip options per line (no clip reused across Shorts or lines), first one downloaded → live preview with `@remotion/player` → **Render**: Remotion CLI renders `src/remotion/Short.tsx` (1080×1920, 30 fps) then FFmpeg two-pass loudnorm to -14 LUFS.
+
+Video: footage with slow push-in, the script's on-screen text slamming in, big word-by-word captions (spoken word in the accent color), progress bar. Per line you can pick another of the 3 clips or search new ones. Files in `data/videos/<scriptId>/`, table `videos`.
+
+**Part 2 (done):** every line has a mode: stock footage, Agnes AI clip, 3D graphic, logo, chart or kinetic text, starting from what the script asked for.
+- Agnes plans the designs per line: 3D scene (glowing chip, server corridor, neural network, data globe, data stream, AI core), chart (counter or bars, only numbers the line itself says, checked in code), kinetic-text phrases, and the company the line is about.
+- Brandfetch Brand API (`BRANDFETCH_API_KEY`): real logos + brand colors, cached per domain in table `brands` and `data/brands/` (the free key has 100 lookups in total). The main company's color becomes the video's accent.
+- 3D with `@remotion/three` + React Three Fiber, animated from the frame number; rendered with the ANGLE OpenGL renderer (`remotion.config.ts`).
+- Transitions from the script (zoom punch, whip pan, glitch, light leak, 3D flip, blur slide) play across each cut without shifting the voice.
+- Agnes Video 2.5 Flash clips are tried for up to 2 B-roll lines (falls back to Pexels when its free queue is full), or per line with "Try AI clip".
+
+**Part 3 (done):** audio.
+- Sound effects: 8 sounds (impact, whoosh, riser, glitch, click, chime, rumble, shimmer) synthesized with FFmpeg once into `data/sfx/` and normalized to the same peak, so there is no library or license to track. Each cut gets the script's SFX cue, or the sound that fits its transition; risers and whooshes start early so they land on the cut. Can be switched off per video.
+- Music: the Music page (`/music`) holds your YouTube Audio Library tracks with a mood and license. The studio detects the script's mood (Agnes) and picks the least-used matching track, or you choose one / "No music". It loops under the voice, ducking from 0.26 to 0.08 while words are spoken, fading in and out. Creative Commons credit text is shown to copy into the description.
