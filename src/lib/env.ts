@@ -5,7 +5,6 @@ const schema = z.object({
   AGNES_API_KEY: z.string().min(1, "AGNES_API_KEY is missing in .env.local"),
   AGNES_BASE_URL: z.string().url().default("https://apihub.agnes-ai.com/v1"),
   AGNES_MODEL: z.string().default("agnes-2.0-flash"),
-  PEXELS_API_KEY: z.string().optional(),
   DEEPGRAM_API_KEY: z.string().optional(),
   DATA_DIR: z.string().default("data"),
 });

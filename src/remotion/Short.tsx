@@ -2,6 +2,7 @@ import { loadFont } from "@remotion/google-fonts/Inter";
 import {
   AbsoluteFill,
   Audio,
+  Img,
   interpolate,
   OffthreadVideo,
   Sequence,
@@ -10,13 +11,26 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
+import { MOVES } from "./moves";
 import { FPS, type ShortProps } from "./types";
 
 const { fontFamily } = loadFont("normal", { weights: ["800", "900"], subsets: ["latin"] });
 
 const toFrame = (seconds: number) => Math.round(seconds * FPS);
 
-/** One stock clip, slowed down if it is shorter than its scene, with a slow push-in for motion. */
+const SceneImage: React.FC<{ src: string; move: number }> = ({ src, move }) => {
+  const frame = useCurrentFrame();
+  const { durationInFrames } = useVideoConfig();
+  const m = MOVES[move % MOVES.length];
+  const t = (from: number, to: number) => interpolate(frame, [0, durationInFrames], [from, to], { extrapolateRight: "clamp" });
+  return (
+    <AbsoluteFill style={{ transform: `scale(${t(m.from.scale, m.to.scale)}) translateX(${t(m.from.x, m.to.x)}%)` }}>
+      <Img src={staticFile(src)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+    </AbsoluteFill>
+  );
+};
+
+/** One stock clip (older Shorts), slowed down if it is shorter than its scene, with a slow push-in for motion. */
 const SceneClip: React.FC<{ clip: string; clipDuration: number; sceneDuration: number }> = ({ clip, clipDuration, sceneDuration }) => {
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
@@ -71,14 +85,31 @@ const Captions: React.FC<{ pages: ShortProps["captions"]; accent: string; hidden
   );
 };
 
-export const Short: React.FC<ShortProps> = ({ duration, voice, accent, scenes, captions, cards }) => {
+// Music sits low under the voice and comes up in the pauses; changes ease over ~0.35s instead of jumping.
+const MUSIC_FULL = 0.28;
+const MUSIC_DUCKED = 0.09;
+const DUCK_EASE = 0.35;
+
+function musicVolume(t: number, speech: { start: number; end: number }[], duration: number): number {
+  let gap = Infinity;
+  for (const r of speech) gap = Math.min(gap, t < r.start ? r.start - t : t > r.end ? t - r.end : 0);
+  const level = MUSIC_DUCKED + (MUSIC_FULL - MUSIC_DUCKED) * Math.min(gap / DUCK_EASE, 1);
+  const fade = Math.min(t / 1, (duration + 0.4 - t) / 1.5, 1);
+  return Math.max(0, level * Math.max(0, fade));
+}
+
+export const Short: React.FC<ShortProps> = ({ duration, voice, accent, scenes, captions, cards, music }) => {
   const outro = cards.find((c) => c.kind === "outro");
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#0b0b0d" }}>
       {scenes.map((scene, i) => (
         <Sequence key={i} from={toFrame(scene.start)} durationInFrames={Math.max(toFrame(scene.end) - toFrame(scene.start), 1)} name={`Scene ${i + 1}`}>
-          <SceneClip clip={scene.clip} clipDuration={scene.clipDuration} sceneDuration={scene.end - scene.start} />
+          {scene.media.kind === "image" ? (
+            <SceneImage src={scene.media.src} move={i} />
+          ) : (
+            <SceneClip clip={scene.media.src} clipDuration={scene.media.duration ?? scene.end - scene.start} sceneDuration={scene.end - scene.start} />
+          )}
         </Sequence>
       ))}
 
@@ -99,6 +130,7 @@ export const Short: React.FC<ShortProps> = ({ duration, voice, accent, scenes, c
       ))}
 
       {voice && <Audio src={staticFile(voice)} />}
+      {music && <Audio src={staticFile(music.src)} loop volume={(f) => musicVolume(f / FPS, music.speech, duration)} />}
     </AbsoluteFill>
   );
 };

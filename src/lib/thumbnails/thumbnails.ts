@@ -1,10 +1,11 @@
 import "server-only";
 import { execFile } from "node:child_process";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { z } from "zod";
 import { agnes } from "@/lib/agnes";
+import { generateAgnesImage } from "@/lib/agnes-image";
 import { getDb } from "@/lib/db";
 import { env } from "@/lib/env";
 import type { ShortScript } from "@/lib/script/schema";
@@ -20,7 +21,6 @@ export const FORMATS = {
 } as const;
 export type ThumbnailFormat = keyof typeof FORMATS;
 
-const IMAGE_MODEL = "agnes-image-2.5-flash";
 const OPTIONS_PER_RUN = 3;
 
 export type Thumbnail = {
@@ -89,30 +89,6 @@ Reply with ONLY JSON: {"concepts":[{"concept":"3-6 word name","prompt":"the imag
   return conceptsSchema.parse(JSON.parse(json)).concepts.slice(0, OPTIONS_PER_RUN);
 }
 
-/** One picture from Agnes Image 2.5 Flash (2K, the format's ratio), saved locally. */
-async function generatePicture(prompt: string, format: ThumbnailFormat, outPath: string): Promise<void> {
-  const res = await fetch(`${env().AGNES_BASE_URL}/images/generations`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${env().AGNES_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: IMAGE_MODEL,
-      // Repeated here because the model sometimes draws words; the real headline is added by Remotion.
-      prompt: `${prompt}. No text, no letters, no words, no logos, no watermark.`,
-      size: "2K",
-      ratio: FORMATS[format].ratio,
-      extra_body: { response_format: "url" },
-    }),
-    signal: AbortSignal.timeout(180_000),
-  });
-  const body = (await res.json().catch(() => ({}))) as { data?: { url?: string }[]; error?: { message?: string } };
-  const url = body.data?.[0]?.url;
-  if (!res.ok || !url) throw new Error(`Agnes image failed (${res.status}): ${body.error?.message ?? "no image returned"}`);
-  // Agnes output links are temporary, so keep our own copy.
-  const image = await fetch(url, { signal: AbortSignal.timeout(60_000) });
-  if (!image.ok) throw new Error(`Downloading the Agnes image failed (${image.status})`);
-  await writeFile(outPath, Buffer.from(await image.arrayBuffer()));
-}
-
 /** Put the real headline on the picture with Remotion (crisp text, brand style). */
 async function renderStill(dir: string, background: string, headline: string, format: ThumbnailFormat, outPath: string): Promise<void> {
   const props: ThumbnailProps = { background, headline, kicker: "AI NEWS", accent: process.env.CARD_ACCENT || "#7CFF6B", format };
@@ -146,7 +122,7 @@ export async function createThumbnails(scriptId: number, format: ThumbnailFormat
     concepts.map(async (c, i) => {
       const background = `bg-${format}-${stamp}-${i + 1}.png`;
       const file = `thumb-${format}-${stamp}-${i + 1}.jpg`;
-      await generatePicture(c.prompt, format, path.join(dir, background));
+      await generateAgnesImage(c.prompt, FORMATS[format].ratio, path.join(dir, background));
       await renderStill(dir, background, script.cards.hook, format, path.join(dir, file));
       return { ...c, background: path.join(dir, background), file: path.join(dir, file) };
     }),

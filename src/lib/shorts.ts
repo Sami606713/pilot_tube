@@ -2,13 +2,13 @@ import "server-only";
 import { getCards, type Card } from "@/lib/cards/render";
 import { getRender, type RenderResult } from "@/lib/render/render";
 import { getDb } from "@/lib/db";
-import { getClips, type Clip } from "@/lib/footage/clips";
+import { getSceneVisuals, type SceneVisual } from "@/lib/scenes/visuals";
 import { fullNarration, wordCount, type ShortScript } from "@/lib/script/schema";
 import { unusedStories } from "@/lib/news/store";
 import { getVoiceover, type Voiceover } from "@/lib/voice/voiceover";
 
-/** Pipeline steps in order. Render and upload arrive in later phases. */
-export const STEPS = ["script", "voice", "clips", "cards", "render", "upload"] as const;
+/** Pipeline steps in order. */
+export const STEPS = ["script", "voice", "images", "cards", "render", "upload"] as const;
 export type Step = (typeof STEPS)[number];
 
 export type ShortSummary = {
@@ -24,10 +24,11 @@ export type ShortSummary = {
   /** Real voiceover length when it exists, otherwise an estimate from word count. */
   duration: number;
   hasVoice: boolean;
-  clipCount: number;
+  /** Scenes that have a picture (or, for older Shorts, a stock clip). */
+  visualCount: number;
   cardCount: number;
-  /** Pexels id of the first scene clip, used as the thumbnail (and its cache key). */
-  thumbId: number | null;
+  /** Small poster of the first scene, used as the list thumbnail. */
+  thumbUrl: string | null;
   /** When the final MP4 was rendered; also its cache key. */
   renderedAt: string | null;
   done: Step[];
@@ -43,22 +44,25 @@ type SummaryRow = {
   story_url: string;
   source: string;
   voice_duration: number | null;
-  clip_count: number;
+  visual_count: number;
   card_count: number;
-  thumb_id: number | null;
+  thumb_image: string | null;
+  thumb_clip: number | null;
   rendered_at: string | null;
+  uploaded_at: string | null;
 };
 
 function summarize(row: SummaryRow): ShortSummary {
   const script = JSON.parse(row.data) as ShortScript;
   const words = wordCount(fullNarration(script));
   const hasVoice = row.voice_duration !== null;
-  const clipsDone = row.clip_count > 0 && row.clip_count >= script.scenes.length;
+  const imagesDone = row.visual_count > 0 && row.visual_count >= script.scenes.length;
   const done: Step[] = ["script"];
   if (hasVoice) done.push("voice");
-  if (clipsDone) done.push("clips");
+  if (imagesDone) done.push("images");
   if (row.card_count > 0) done.push("cards");
   if (row.rendered_at) done.push("render");
+  if (row.uploaded_at) done.push("upload");
   return {
     id: row.id,
     title: script.title,
@@ -71,9 +75,13 @@ function summarize(row: SummaryRow): ShortSummary {
     sceneCount: script.scenes.length,
     duration: row.voice_duration ?? words / 2.5,
     hasVoice,
-    clipCount: row.clip_count,
+    visualCount: row.visual_count,
     cardCount: row.card_count,
-    thumbId: row.thumb_id,
+    // Same URL scheme as visualUrls(): the version is the picture time or the old clip id.
+    thumbUrl:
+      row.thumb_image || row.thumb_clip
+        ? `/api/script/${row.id}/visual/0/poster?v=${encodeURIComponent(row.thumb_image ?? String(row.thumb_clip))}`
+        : null,
     renderedAt: row.rendered_at,
     done,
     next: STEPS.find((s) => !done.includes(s)) ?? "upload",
@@ -84,10 +92,13 @@ const SUMMARY_SQL = `
   SELECT sc.id, sc.created_at, sc.data,
          st.title AS story_title, st.url AS story_url, st.source,
          (SELECT v.duration FROM voiceovers v WHERE v.script_id = sc.id) AS voice_duration,
-         (SELECT COUNT(*) FROM clips c WHERE c.script_id = sc.id) AS clip_count,
+         (SELECT COUNT(*) FROM (SELECT scene_index FROM scene_images WHERE script_id = sc.id
+                               UNION SELECT scene_index FROM clips WHERE script_id = sc.id)) AS visual_count,
          (SELECT COUNT(*) FROM cards k WHERE k.script_id = sc.id) AS card_count,
-         (SELECT c.pexels_id FROM clips c WHERE c.script_id = sc.id AND c.scene_index = 0) AS thumb_id,
-         (SELECT r.created_at FROM renders r WHERE r.script_id = sc.id) AS rendered_at
+         (SELECT i.created_at FROM scene_images i WHERE i.script_id = sc.id AND i.scene_index = 0) AS thumb_image,
+         (SELECT c.pexels_id FROM clips c WHERE c.script_id = sc.id AND c.scene_index = 0) AS thumb_clip,
+         (SELECT r.created_at FROM renders r WHERE r.script_id = sc.id) AS rendered_at,
+         (SELECT u.created_at FROM uploads u WHERE u.script_id = sc.id) AS uploaded_at
   FROM scripts sc JOIN stories st ON st.id = sc.story_id`;
 
 /** Every Short with its pipeline progress, newest first, in one query. */
@@ -99,7 +110,7 @@ export function listShorts(limit = 50): ShortSummary[] {
 export type ShortDetail = ShortSummary & {
   script: ShortScript;
   voiceover: Voiceover | null;
-  clips: Clip[];
+  visuals: SceneVisual[];
   cards: Card[];
   render: RenderResult | null;
 };
@@ -111,7 +122,7 @@ export function getShort(id: number): ShortDetail | null {
     ...summarize(row),
     script: JSON.parse(row.data) as ShortScript,
     voiceover: getVoiceover(id),
-    clips: getClips(id),
+    visuals: getSceneVisuals(id),
     cards: getCards(id),
     render: getRender(id),
   };

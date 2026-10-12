@@ -7,9 +7,12 @@ import { fetchArticleText } from "@/lib/news/article";
 import { getStory, markStorySkipped, markStoryUsed, recentlyUsedTitles, refreshNews, unusedStories, type StoryRow } from "@/lib/news/store";
 import { fullNarration, shortScriptSchema, wordCount, type ShortScript } from "./schema";
 
-// ~2.5 words per second of speech → 30–45 second Short.
-const MIN_WORDS = 70;
-const MAX_WORDS = 120;
+// The voice speaks ~2.4 words/second, so 120-140 words is ~50-58s: close to, but under, the 60s maximum.
+const MIN_WORDS = 120;
+const MAX_WORDS = 140;
+// Hard limits for accepting a script: never short, never past ~60 seconds.
+const ACCEPT_MIN = 110;
+const ACCEPT_MAX = 145;
 // Below this we can't verify facts (paywall, bot block), so the story is skipped instead of guessed at.
 const MIN_ARTICLE_CHARS = 800;
 const MAX_STORY_PICKS = 4;
@@ -25,13 +28,15 @@ The audience is curious people and developers who want the latest AI news in und
 Rules:
 - FACTS: use ONLY facts stated in the article text given. Never invent dates, numbers, names, quotes or events.
   If a detail is not in the article, leave it out.
-- LENGTH: total narration MUST be ${MIN_WORDS}-${MAX_WORDS} words (30-45 seconds when spoken).
-  Write 6-8 scenes of 12-16 words each. Count your words before replying.
+- LENGTH: total narration MUST be ${MIN_WORDS}-${MAX_WORDS} words (50-58 seconds when spoken; the Short must stay under 60 seconds).
+  Write EXACTLY 10 scenes, each 12-14 words (10 x 13 = ~130 words). Count the words in every scene before replying.
+  Use the article's real details (who, what, numbers, why it matters, what happens next) to fill all 10 scenes.
 - Scene 1 is the hook: under 12 words, bold and specific. Never start with "Hey guys" or "In today's video".
 - Middle scenes: the key facts in simple words and short sentences, one idea per scene.
 - Last scene: a one-line takeaway, then a question for the comments.
-- Each scene gets a 2-4 word "pexelsQuery" for generic stock footage (e.g. "server room lights", "person typing laptop", "robot arm factory").
-  No brand names or people's names, since stock sites don't have them.
+- Each scene gets a "visual": ONE sentence describing a striking, cinematic picture that shows what the narration says
+  (e.g. "a glowing robot hand slipping a fake note to a police officer at night").
+  Concrete subject, setting and lighting. No text or logos in the picture, no real people's faces (use silhouettes, robots, hands, objects).
 - title: under 70 characters, catchy but honest, no hashtags.
 - description: 2-3 sentences, then "Source: <source name>".
 - hashtags: 3-6 tags, always include "#Shorts" and "#AI".
@@ -44,7 +49,7 @@ Rules:
 
 Reply with ONLY a JSON object of this shape, no markdown:
 {"title": string, "description": string, "hashtags": string[],
- "scenes": [{"narration": string, "pexelsQuery": string}],
+ "scenes": [{"narration": string, "visual": string}],
  "cards": {"hook": string, "stats": [{"value": string, "label": string}], "outro": string}}`;
 
 type Message = { role: "system" | "user" | "assistant"; content: string };
@@ -59,7 +64,7 @@ function extractJson(text: string): unknown {
 /** Ask Agnes for JSON and validate it; on failure, send the error back so it can correct itself. */
 async function askJson<T>(messages: Message[], parse: (raw: unknown) => T, temperature: number): Promise<T> {
   let lastError: unknown;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 4; attempt++) {
     const res = await agnes().chat.completions.create({ model: env().AGNES_MODEL, messages, temperature });
     const content = res.choices[0]?.message?.content ?? "";
     try {
@@ -98,10 +103,20 @@ async function pickStory(stories: StoryRow[]): Promise<StoryRow> {
 function validateScript(raw: unknown): ShortScript {
   const script = shortScriptSchema.parse(raw);
   const words = wordCount(fullNarration(script));
-  if (words < MIN_WORDS * 0.8 || words > MAX_WORDS * 1.2) {
-    const fix = words < MIN_WORDS ? "Add more scenes with real details from the article" : "Shorten the scenes";
-    throw new Error(`Narration is ${words} words but must be ${MIN_WORDS}-${MAX_WORDS}. ${fix}`);
+  if (words < ACCEPT_MIN || words > ACCEPT_MAX) {
+    // Point at the exact scenes to fix: models correct specific items far better than a total word count.
+    const counts = script.scenes.map((sc, i) => ({ n: i + 1, words: wordCount(sc.narration) }));
+    const fix =
+      words < MIN_WORDS
+        ? [
+            ...counts.filter((c) => c.words < 12).map((c) => `scene ${c.n} has ${c.words} words, rewrite it with 12-14`),
+            ...(script.scenes.length < 10 ? [`there are only ${script.scenes.length} scenes, add ${10 - script.scenes.length} more with real details from the article`] : []),
+          ].join("; ")
+        : counts.filter((c) => c.words > 14).map((c) => `scene ${c.n} has ${c.words} words, cut it to 12-13`).join("; ");
+    throw new Error(`Narration is ${words} words but must be ${MIN_WORDS}-${MAX_WORDS}. Fix: ${fix || "adjust the scene lengths"}`);
   }
+  const missing = script.scenes.findIndex((s) => !s.visual);
+  if (missing >= 0) throw new Error(`Scene ${missing + 1} has no "visual" picture idea`);
   if (!script.hashtags.some((h) => h.toLowerCase() === "#shorts")) script.hashtags.unshift("#Shorts");
   return script;
 }

@@ -9,6 +9,7 @@ import {
   Gear,
   ImageSquare,
   Lightbulb,
+  MusicNotes,
   PaperPlaneTilt,
   Play,
   SquaresFour,
@@ -39,8 +40,9 @@ const WORKSPACE: NavItem[] = [
   { href: "/planner", label: "Planner", Icon: CalendarBlank, soon: true },
   { href: "/shorts", label: "Scripts", Icon: Article },
   { href: "/studio", label: "Video studio", Icon: FilmStrip },
+  { href: "/music", label: "Music", Icon: MusicNotes },
   { href: "/thumbnails", label: "Thumbnails", Icon: ImageSquare },
-  { href: "/publishing", label: "Publishing", Icon: PaperPlaneTilt, soon: true },
+  { href: "/publishing", label: "Publishing", Icon: PaperPlaneTilt },
   { href: "/analytics", label: "Analytics", Icon: ChartLineUp },
   { href: "/workflows", label: "Workflows", Icon: FlowArrow, soon: true },
 ];

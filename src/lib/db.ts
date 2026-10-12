@@ -79,6 +79,54 @@ export function getDb(): DatabaseSync {
       created_at     TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS scene_images (
+      script_id   INTEGER NOT NULL REFERENCES scripts(id),
+      scene_index INTEGER NOT NULL,
+      prompt      TEXT NOT NULL,
+      file_path   TEXT NOT NULL,
+      created_at  TEXT NOT NULL,
+      PRIMARY KEY (script_id, scene_index)
+    );
+
+    CREATE TABLE IF NOT EXISTS motion_graphics (
+      script_id      INTEGER PRIMARY KEY REFERENCES scripts(id),
+      plan           TEXT NOT NULL,
+      duration       REAL NOT NULL,
+      file_path      TEXT NOT NULL,
+      render_seconds REAL NOT NULL,
+      created_at     TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS music_tracks (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      title       TEXT NOT NULL,
+      artist      TEXT,
+      mood        TEXT NOT NULL,
+      license     TEXT NOT NULL,
+      attribution TEXT,
+      file_path   TEXT NOT NULL,
+      duration    REAL NOT NULL,
+      created_at  TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS short_music (
+      script_id  INTEGER PRIMARY KEY REFERENCES scripts(id),
+      track_id   INTEGER REFERENCES music_tracks(id),
+      mood       TEXT,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS uploads (
+      script_id   INTEGER PRIMARY KEY REFERENCES scripts(id),
+      video_id    TEXT NOT NULL,
+      title       TEXT NOT NULL,
+      privacy     TEXT NOT NULL,
+      publish_at  TEXT,
+      render_at   TEXT NOT NULL,
+      created_at  TEXT NOT NULL,
+      updated_at  TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS thumbnails (
       id              INTEGER PRIMARY KEY AUTOINCREMENT,
       script_id       INTEGER NOT NULL REFERENCES scripts(id),

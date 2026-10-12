@@ -3,6 +3,7 @@
 import { Pause, Play } from "@phosphor-icons/react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { clock } from "@/lib/format";
+import { MOVES } from "@/remotion/moves";
 import { captionPages, cardSchedule, indexAt, type CardKind, type SceneTiming, type TimedWord } from "@/lib/timeline";
 
 export type PreviewData = {
@@ -11,8 +12,8 @@ export type PreviewData = {
   duration: number;
   words: TimedWord[];
   scenes: SceneTiming[];
-  /** Per scene index: clip video + poster URLs, or null when clips aren't downloaded yet. */
-  clips: ({ src: string; poster: string } | null)[];
+  /** Per scene index: the scene's picture (or old stock clip) + poster URLs, or null when it has none yet. */
+  visuals: ({ kind: "image" | "video"; src: string; poster: string } | null)[];
   cards: { name: string; kind: CardKind; src: string; poster: string }[];
 };
 
@@ -112,7 +113,29 @@ export function PreviewProvider({ data, children }: { data: PreviewData; childre
   );
 }
 
-/** One scene's clip. Mounted fresh per scene so it starts at the right offset. */
+/**
+ * One scene's picture with the same camera move the render uses, started at the right offset.
+ * Driven by the Web Animations API on the element, so no React state changes per frame.
+ */
+function SceneImage({ src, move, offset, duration, playing }: { src: string; move: number; offset: number; duration: number; playing: boolean }) {
+  const ref = useRef<HTMLImageElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const m = MOVES[move % MOVES.length];
+    const frame = (p: { scale: number; x: number }) => ({ transform: `scale(${p.scale}) translateX(${p.x}%)` });
+    const anim = el.animate([frame(m.from), frame(m.to)], { duration: Math.max(duration, 0.1) * 1000, fill: "forwards", easing: "linear" });
+    anim.currentTime = Math.max(offset, 0) * 1000;
+    if (!playing) anim.pause();
+    return () => anim.cancel();
+    // Re-sync only when play state flips; offset is read at that moment.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playing]);
+  // eslint-disable-next-line @next/next/no-img-element -- local generated scene picture
+  return <img ref={ref} src={src} alt="" className="absolute inset-0 size-full object-cover" />;
+}
+
+/** One scene's clip (older Shorts). Mounted fresh per scene so it starts at the right offset. */
 function SceneVideo({ src, poster, offset, playing }: { src: string; poster: string; offset: number; playing: boolean }) {
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
@@ -137,7 +160,7 @@ export function PreviewPlayer() {
   const slots = useMemo(() => cardSchedule(data.cards, data.scenes, data.duration), [data.cards, data.scenes, data.duration]);
 
   const scene = data.scenes[sceneIndex];
-  const clip = data.clips[sceneIndex] ?? data.clips[0] ?? null;
+  const visual = data.visuals[sceneIndex] ?? data.visuals[0] ?? null;
   const page = pages[indexAt(pages, time)];
   const slot = slots[indexAt(slots, time)];
   const card = slot ? data.cards.find((c) => c.name === slot.name) : undefined;
@@ -146,15 +169,24 @@ export function PreviewPlayer() {
   return (
     <div className="flex flex-col gap-3">
       <div className="relative mx-auto aspect-[9/16] w-full max-w-[340px] overflow-hidden rounded-xl bg-[#0b0b0d] ring-1 ring-border">
-        {clip ? (
-          playing ? (
-            <SceneVideo key={sceneIndex} src={clip.src} poster={clip.poster} offset={time - (scene?.start ?? 0)} playing={playing} />
+        {visual ? (
+          visual.kind === "image" ? (
+            <SceneImage
+              key={sceneIndex}
+              src={visual.src}
+              move={sceneIndex}
+              offset={time - (scene?.start ?? 0)}
+              duration={scene ? scene.end - scene.start : 4}
+              playing={playing}
+            />
+          ) : playing ? (
+            <SceneVideo key={sceneIndex} src={visual.src} poster={visual.poster} offset={time - (scene?.start ?? 0)} playing={playing} />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element -- local 270px poster
-            <img src={clip.poster} alt="" className="absolute inset-0 size-full object-cover" />
+            <img src={visual.poster} alt="" className="absolute inset-0 size-full object-cover" />
           )
         ) : (
-          <div className="absolute inset-0 grid place-items-center px-8 text-center text-sm text-[#a6a6b0]">Find clips to see footage here</div>
+          <div className="absolute inset-0 grid place-items-center px-8 text-center text-sm text-[#a6a6b0]">Make the scene images to see pictures here</div>
         )}
 
         {card &&
@@ -214,7 +246,7 @@ export function PreviewPlayer() {
 }
 
 /** Scene list that follows playback; click a scene to jump to it. */
-export function SceneList({ scenes }: { scenes: { narration: string; pexelsQuery: string }[] }) {
+export function SceneList({ scenes }: { scenes: { narration: string; visual: string }[] }) {
   const { data, time, sceneIndex, seek, playing } = usePreview();
   const hasTimings = data.scenes.length === scenes.length && Boolean(data.audioSrc);
 
@@ -223,7 +255,7 @@ export function SceneList({ scenes }: { scenes: { narration: string; pexelsQuery
       {scenes.map((scene, i) => {
         const timing = data.scenes[i];
         const active = hasTimings && i === sceneIndex && (playing || time > 0);
-        const clip = data.clips[i];
+        const clip = data.visuals[i];
         return (
           <li key={i}>
             <button
@@ -239,7 +271,7 @@ export function SceneList({ scenes }: { scenes: { narration: string; pexelsQuery
               </span>
               <span className="flex min-w-0 flex-col gap-1">
                 <span className="text-sm leading-relaxed text-foreground">{scene.narration}</span>
-                <span className="truncate font-mono text-[11px] text-subtle">{scene.pexelsQuery}</span>
+                <span className="line-clamp-2 text-[11px] text-subtle">{scene.visual}</span>
               </span>
               {clip ? (
                 // eslint-disable-next-line @next/next/no-img-element -- local 270px poster

@@ -1,11 +1,11 @@
-import { Article, Check, FilmSlate, FilmStrip, Microphone, Sparkle, UploadSimple } from "@phosphor-icons/react/dist/ssr";
+import { Article, Check, FilmSlate, ImageSquare, Microphone, Sparkle, UploadSimple } from "@phosphor-icons/react/dist/ssr";
 import type { ComponentType } from "react";
 import { STEPS, type Step } from "@/lib/shorts";
 
 export const STEP_META: Record<Step, { label: string; Icon: ComponentType<{ size?: number; weight?: "regular" | "bold" | "fill" }> ; soon?: boolean }> = {
   script: { label: "Script", Icon: Article },
   voice: { label: "Voice", Icon: Microphone },
-  clips: { label: "Clips", Icon: FilmStrip },
+  images: { label: "Images", Icon: ImageSquare },
   cards: { label: "Cards", Icon: Sparkle },
   render: { label: "Render", Icon: FilmSlate },
   upload: { label: "Upload", Icon: UploadSimple, soon: true },

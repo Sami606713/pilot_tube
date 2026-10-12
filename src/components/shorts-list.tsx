@@ -22,9 +22,9 @@ export function NewShortButton({ variant = "primary" }: { variant?: "primary" | 
 function Thumb({ short }: { short: ShortSummary }) {
   return (
     <div className="relative aspect-[9/16] w-11 shrink-0 overflow-hidden rounded-md bg-secondary ring-1 ring-inset ring-border">
-      {short.thumbId ? (
+      {short.thumbUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- local API thumbnail, already 270px
-        <img src={`/api/script/${short.id}/clip/0/poster?v=${short.thumbId}`} alt="" loading="lazy" className="size-full object-cover" />
+        <img src={short.thumbUrl} alt="" loading="lazy" className="size-full object-cover" />
       ) : (
         <FilmStrip size={16} className="absolute inset-0 m-auto text-subtle" />
       )}
@@ -39,7 +39,7 @@ export function ShortsList({ shorts }: { shorts: ShortSummary[] }) {
         <div className="flex flex-col gap-1">
           <h3 className="text-base font-semibold">No Shorts yet</h3>
           <p className="max-w-[52ch] text-sm text-muted-foreground">
-            PilotTube reads today&apos;s AI news, picks the strongest story and writes a 30 to 45 second script from the real article.
+            PilotTube reads today&apos;s AI news, picks the strongest story and writes a script of up to 60 seconds from the real article.
           </p>
         </div>
         <NewShortButton />
