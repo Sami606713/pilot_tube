@@ -28,6 +28,18 @@ export function getDb(): DatabaseSync {
       created_at  TEXT NOT NULL,
       updated_at  TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS scripts (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      research_id INTEGER,
+      topic       TEXT NOT NULL,
+      status      TEXT NOT NULL,
+      steps       TEXT NOT NULL,
+      content     TEXT,
+      error       TEXT,
+      created_at  TEXT NOT NULL,
+      updated_at  TEXT NOT NULL
+    );
   `);
   return db;
 }

@@ -2,17 +2,13 @@
 
 import {
   ArrowClockwise,
-  CheckCircle,
-  Circle,
   CircleNotch,
   ClockCounterClockwise,
   Copy,
   DownloadSimple,
   MagnifyingGlass,
-  MinusCircle,
   Trash,
   Warning,
-  XCircle,
 } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -20,8 +16,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { researchMarkdown } from "@/lib/research/markdown";
-import { DEPTHS, TIME_RANGES, type Depth, type Research, type ResearchSummary, type Score, type Step, type TimeRange } from "@/lib/research/types";
+import { DEPTHS, TIME_RANGES, type Depth, type Research, type ResearchSummary, type Score, type TimeRange } from "@/lib/research/types";
 import { cn } from "@/lib/utils";
+import { ago, Elapsed, RunSteps } from "@/components/run-steps";
 import { ReportView } from "./report-view";
 
 const SCORE_STYLE: Record<Score["label"], string> = {
@@ -29,14 +26,6 @@ const SCORE_STYLE: Record<Score["label"], string> = {
   OK: "bg-amber-400/15 text-amber-400",
   Weak: "bg-destructive/15 text-destructive",
 };
-
-function ago(iso: string): string {
-  const mins = Math.round((Date.now() - Date.parse(iso)) / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  if (mins < 48 * 60) return `${Math.round(mins / 60)}h ago`;
-  return `${Math.round(mins / 1440)}d ago`;
-}
 
 function Segmented<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: Record<T, string>; onChange: (v: T) => void }) {
   return (
@@ -58,43 +47,6 @@ function Segmented<T extends string>({ label, value, options, onChange }: { labe
       </div>
     </div>
   );
-}
-
-const STEP_ICON: Record<Step["state"], React.ReactNode> = {
-  waiting: <Circle className="size-4 text-subtle" />,
-  running: <CircleNotch weight="bold" className="size-4 animate-spin text-brand" />,
-  done: <CheckCircle weight="fill" className="size-4 text-success" />,
-  skipped: <MinusCircle className="size-4 text-subtle" />,
-  failed: <XCircle weight="fill" className="size-4 text-destructive" />,
-};
-
-function Steps({ steps }: { steps: Step[] }) {
-  return (
-    <ol className="flex flex-col gap-3">
-      {steps.map((s) => (
-        <li key={s.key} className="flex gap-3">
-          <span className="mt-0.5 shrink-0">{STEP_ICON[s.state]}</span>
-          <div className="flex min-w-0 flex-col">
-            <span className={cn("text-sm", s.state === "waiting" || s.state === "skipped" ? "text-muted-foreground" : "")}>
-              {s.label}
-              {s.state === "skipped" && " (Quick: skipped)"}
-            </span>
-            {s.detail && <span className="text-xs text-muted-foreground">{s.detail}</span>}
-          </div>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-function Elapsed({ since }: { since: string }) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
-  const s = Math.max(0, Math.round((now - Date.parse(since)) / 1000));
-  return <span className="font-mono tabular-nums">{Math.floor(s / 60)}:{String(s % 60).padStart(2, "0")}</span>;
 }
 
 export function ResearchWorkspace({ initialHistory, initialId }: { initialHistory: ResearchSummary[]; initialId: number | null }) {
@@ -262,7 +214,7 @@ export function ResearchWorkspace({ initialHistory, initialId }: { initialHistor
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-5">
-                <Steps steps={shown.steps} />
+                <RunSteps steps={shown.steps} skippedNote="Quick: skipped" />
                 {shown.status === "running" && (
                   <p className="text-xs text-muted-foreground">You can leave this page; the research keeps running and shows up in History.</p>
                 )}
