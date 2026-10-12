@@ -1,11 +1,11 @@
 import "server-only";
 import { Composio } from "@composio/core";
 
-/** Composio runs the Google login and calls the YouTube API for PilotTube. */
+/** Composio holds the logins for YouTube (Google) and Tavily (web research) and calls their APIs for PilotTube. */
 let client: Composio | undefined;
 
 // Pinned so a Composio toolkit update can't silently change tool inputs or outputs.
-const TOOLKIT_VERSIONS = { youtube: "20261008_00" };
+const TOOLKIT_VERSIONS = { youtube: "20261008_00", tavily: "20260930_00" };
 
 export function composioConfigured(): boolean {
   return Boolean(process.env.COMPOSIO_API_KEY);
@@ -79,4 +79,19 @@ export async function youtubeApi<T = Record<string, unknown>>(
     throw new Error(youtubeError(url, data?.error?.message ?? `HTTP ${res.status}`));
   }
   return res.data as T;
+}
+
+let tavilyAccount: string | undefined;
+
+/** Run a Tavily tool (search, extract) with the Tavily key connected in Composio. */
+export async function runTavilyTool<T = Record<string, unknown>>(slug: string, args: Record<string, unknown>): Promise<T> {
+  if (!tavilyAccount) {
+    const list = await composio().connectedAccounts.list({ toolkitSlugs: ["tavily"] });
+    const active = (list.items as { id: string; status: string }[]).find((a) => a.status === "ACTIVE");
+    if (!active) throw new Error("Tavily is not connected in Composio. Add your Tavily API key there.");
+    tavilyAccount = active.id;
+  }
+  const result = await composio().tools.execute(slug, { userId: composioUserId(), connectedAccountId: tavilyAccount, arguments: args });
+  if (!result.successful) throw new Error(`${slug} failed: ${String(result.error ?? "unknown error").slice(0, 300)}`);
+  return result.data as T;
 }
