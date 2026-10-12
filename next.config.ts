@@ -8,10 +8,6 @@ const nextConfig: NextConfig = {
   devIndicators: false,
   experimental: { optimizePackageImports: ["@phosphor-icons/react"] },
   partialPrefetching: true,
-  // The news queue grew into the Research page.
-  async redirects() {
-    return [{ source: "/news", destination: "/research", permanent: false }];
-  },
   turbopack: {
     rules: {
       "*.css": {

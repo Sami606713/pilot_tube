@@ -1,7 +1,6 @@
 import { ArrowSquareOut, Eye, Heart, PlugsConnected, YoutubeLogo } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 import { ActionButton } from "@/components/action-button";
-import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { timeAgo } from "@/lib/format";
 import type { TrafficSource, VideoStat } from "@/lib/youtube/analytics";
@@ -33,9 +32,6 @@ export function YouTubeUnavailable({ error }: { error: string }) {
           <p className="font-medium">YouTube numbers are unavailable</p>
           <p className="max-w-[60ch] text-sm text-muted-foreground">{error}</p>
         </div>
-        <Button variant="outline" asChild>
-          <Link href="/settings">Check connections</Link>
-        </Button>
       </CardContent>
     </Card>
   );

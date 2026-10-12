@@ -34,17 +34,28 @@ import {
 
 type NavItem = { href: string; label: string; Icon: ComponentType<{ className?: string }>; soon?: boolean };
 
-const WORKSPACE: NavItem[] = [
-  { href: "/", label: "Overview", Icon: SquaresFour },
-  { href: "/research", label: "Research", Icon: Lightbulb },
-  { href: "/planner", label: "Planner", Icon: CalendarBlank, soon: true },
-  { href: "/shorts", label: "Scripts", Icon: Article },
-  { href: "/studio", label: "Video studio", Icon: FilmStrip },
-  { href: "/music", label: "Music", Icon: MusicNotes },
-  { href: "/thumbnails", label: "Thumbnails", Icon: ImageSquare },
-  { href: "/publishing", label: "Publishing", Icon: PaperPlaneTilt },
-  { href: "/analytics", label: "Analytics", Icon: ChartLineUp },
-  { href: "/workflows", label: "Workflows", Icon: FlowArrow, soon: true },
+/** Grouped in the order a Short is made: topic → script → video → YouTube. */
+const GROUPS: { label?: string; items: NavItem[] }[] = [
+  { items: [{ href: "/", label: "Overview", Icon: SquaresFour }] },
+  {
+    label: "Create",
+    items: [
+      { href: "/research", label: "Research", Icon: Lightbulb },
+      { href: "/planner", label: "Planner", Icon: CalendarBlank },
+      { href: "/shorts", label: "Scripts", Icon: Article },
+      { href: "/music", label: "Music", Icon: MusicNotes },
+      { href: "/studio", label: "Video studio", Icon: FilmStrip },
+      { href: "/thumbnails", label: "Thumbnails", Icon: ImageSquare },
+    ],
+  },
+  {
+    label: "Publish",
+    items: [
+      { href: "/publishing", label: "Publishing", Icon: PaperPlaneTilt },
+      { href: "/analytics", label: "Analytics", Icon: ChartLineUp },
+    ],
+  },
+  { label: "Automate", items: [{ href: "/workflows", label: "Workflows", Icon: FlowArrow }] },
 ];
 
 function isActive(pathname: string | null, href: string) {
@@ -106,12 +117,14 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-[11px] tracking-wide uppercase">Workspace</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <Nav items={WORKSPACE} />
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {GROUPS.map((group, i) => (
+          <SidebarGroup key={group.label ?? i}>
+            {group.label && <SidebarGroupLabel className="text-[11px] tracking-wide uppercase">{group.label}</SidebarGroupLabel>}
+            <SidebarGroupContent>
+              <Nav items={group.items} />
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
 
       <SidebarSeparator className="mx-0" />

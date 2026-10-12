@@ -1,18 +1,13 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { PipelineCard } from "@/components/dashboard/pipeline-card";
-import { RecentVideos } from "@/components/dashboard/recent-videos";
 import { StatCard, StatCardSkeleton } from "@/components/dashboard/stat-card";
-import { StoryList } from "@/components/news-queue";
 import { PageHeader } from "@/components/page-header";
-import { NewShortButton } from "@/components/shorts-list";
 import {
   Card,
   CardAction,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -26,8 +21,6 @@ import {
 } from "@/components/youtube/channel-widgets";
 import { DailyChart } from "@/components/youtube/views-chart";
 import { timeAgo } from "@/lib/format";
-import { unusedStories } from "@/lib/news/store";
-import { getOverview, listShorts } from "@/lib/shorts";
 import {
   getYouTubeOverview,
   getYouTubeVideos,
@@ -41,13 +34,8 @@ export default function DashboardPage() {
     <>
       <PageHeader
         title="Dashboard"
-        description="Your channel and your Shorts pipeline in one place."
-        actions={
-          <>
-            <RefreshYouTubeButton />
-            <NewShortButton />
-          </>
-        }
+        description="How your channel is doing, from YouTube through Composio."
+        actions={<RefreshYouTubeButton />}
       />
       <div className="flex flex-col gap-6">
         {/* YouTube numbers come from Composio (cached 15 min) and stream in separately from local data. */}
@@ -55,21 +43,9 @@ export default function DashboardPage() {
           <ChannelSection />
         </Suspense>
 
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-          <div className="flex flex-col gap-6 xl:col-span-8">
-            <Suspense fallback={<div className="skeleton h-56 rounded-xl" />}>
-              <PipelineSection />
-            </Suspense>
-          </div>
-          <div className="flex flex-col gap-6 xl:col-span-4">
-            <Suspense fallback={<div className="skeleton h-80 rounded-xl" />}>
-              <ChannelSideSection />
-            </Suspense>
-            <Suspense fallback={<div className="skeleton h-80 rounded-xl" />}>
-              <NewsSection />
-            </Suspense>
-          </div>
-        </div>
+        <Suspense fallback={<div className="skeleton h-80 rounded-xl" />}>
+          <ChannelSideSection />
+        </Suspense>
       </div>
     </>
   );
@@ -77,7 +53,6 @@ export default function DashboardPage() {
 
 async function ChannelSection() {
   await connection();
-  const rendered = getOverview(listShorts()).rendered;
   let yt;
   try {
     yt = await getYouTubeOverview(DAYS);
@@ -106,7 +81,6 @@ async function ChannelSection() {
         <StatCard
           label="Videos on YouTube"
           value={channel.videos.toLocaleString("en-US")}
-          note={`${rendered} rendered in PilotTube`}
         />
       </div>
 
@@ -146,68 +120,10 @@ async function ChannelSideSection() {
   }
   const [yt, videos] = data;
   return (
-    <>
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <TrafficCard traffic={yt.traffic} days={DAYS} />
       <TopVideosCard videos={videos} />
-    </>
-  );
-}
-
-async function PipelineSection() {
-  await connection();
-  const shorts = listShorts();
-  const overview = getOverview(shorts);
-  const inScripts = shorts.filter(
-    (s) =>
-      ["voice", "images", "cards"].includes(s.next) &&
-      !s.done.includes("render"),
-  ).length;
-  const readyToPublish = shorts.filter(
-    (s) => s.done.includes("render") && !s.done.includes("upload"),
-  ).length;
-  return (
-    <>
-      <PipelineCard
-        stages={[
-          { label: "Ideas", count: overview.queuedStories, href: "/research" },
-          { label: "Scripts", count: inScripts, href: "/shorts" },
-          { label: "Rendering", count: overview.ready, href: "/shorts" },
-          { label: "Ready to publish", count: readyToPublish, href: "/studio" },
-        ]}
-      />
-      <RecentVideos shorts={shorts.slice(0, 6)} />
-    </>
-  );
-}
-
-async function NewsSection() {
-  await connection();
-  const overview = getOverview(listShorts());
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Up next from the news</CardTitle>
-        <CardAction>
-          <Link
-            href="/research"
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            Research
-          </Link>
-        </CardAction>
-      </CardHeader>
-      <CardContent className="px-0">
-        <StoryList
-          stories={unusedStories(48, 5)}
-          empty="No unused AI stories. Open Research to find one."
-        />
-      </CardContent>
-      <CardFooter className="text-xs text-muted-foreground">
-        {overview.lastNewsAt
-          ? `Fetched ${timeAgo(overview.lastNewsAt)}`
-          : "Never fetched"}
-      </CardFooter>
-    </Card>
+    </div>
   );
 }
 
