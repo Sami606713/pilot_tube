@@ -1,33 +1,29 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { Suspense } from "react";
-import { RefreshNewsButton } from "@/components/news-queue";
 import { PageHeader } from "@/components/page-header";
-import { ResearchExplorer } from "@/components/research/research-explorer";
-import { StoryCardSkeleton } from "@/components/research/story-card";
+import { ResearchWorkspace } from "@/components/research/research-workspace";
+import { listResearch } from "@/lib/research/store";
 
 export const metadata: Metadata = { title: "Research" };
 
-export default function ResearchPage() {
+export default function ResearchPage({ searchParams }: PageProps<"/research">) {
   return (
     <>
       <PageHeader
         title="Research"
-        description="Find the AI stories worth a Short. Search any topic live, filter by time, and turn any story into a Short."
-        actions={<RefreshNewsButton />}
+        description="Deep, fact-checked research on any AI topic: real sources, word-for-word quotes, cross-checked facts and a cited report."
       />
-      {/* The explorer reads its filters from the URL, which is request-time data. */}
-      <Suspense
-        fallback={
-          <div className="flex flex-col gap-3" aria-busy="true">
-            <div className="skeleton h-12 rounded-xl" />
-            {Array.from({ length: 4 }, (_, i) => (
-              <StoryCardSkeleton key={i} />
-            ))}
-          </div>
-        }
-      >
-        <ResearchExplorer />
+      <Suspense fallback={<div className="skeleton h-96 rounded-xl" aria-busy="true" />}>
+        {searchParams.then((sp) => (
+          <ResearchContent id={Number(Array.isArray(sp.id) ? sp.id[0] : sp.id) || null} />
+        ))}
       </Suspense>
     </>
   );
+}
+
+async function ResearchContent({ id }: { id: number | null }) {
+  await connection();
+  return <ResearchWorkspace initialHistory={listResearch()} initialId={id} />;
 }

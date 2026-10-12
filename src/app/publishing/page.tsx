@@ -10,10 +10,21 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { clock, timeAgo } from "@/lib/format";
-import { getShortMusic } from "@/lib/music/short-music";
 import { listUploads, uploadStats, type Upload, type VideoNumbers } from "@/lib/publish/youtube";
-import { getRender } from "@/lib/render/render";
-import { listShorts, type ShortSummary } from "@/lib/shorts";
+import { getProject, listProjects } from "@/lib/studio/store";
+
+/** A rendered video from the Video studio. */
+type Item = { id: number; title: string; duration: number; renderedAt: string; render: string };
+
+function rendered(): Item[] {
+  return listProjects()
+    .filter((p) => p.rendered)
+    .flatMap((x) => {
+      const p = getProject(x.scriptId);
+      if (!p?.render) return [];
+      return [{ id: p.scriptId, title: p.title, duration: p.render.duration, renderedAt: p.render.createdAt, render: p.render.createdAt }];
+    });
+}
 
 export const metadata: Metadata = { title: "Publishing" };
 
@@ -41,11 +52,11 @@ const compact = new Intl.NumberFormat("en", { notation: "compact" });
 
 async function PublishingContent() {
   await connection();
-  const shorts = listShorts(200);
-  const byId = new Map(shorts.map((s) => [s.id, s]));
+  const items = rendered();
+  const byId = new Map(items.map((s) => [s.id, s]));
   const uploads = listUploads();
   const uploaded = new Set(uploads.map((u) => u.scriptId));
-  const ready = shorts.filter((s) => s.done.includes("render") && !uploaded.has(s.id));
+  const ready = items.filter((s) => !uploaded.has(s.id));
   const scheduled = uploads.filter((u) => u.state === "scheduled").sort((a, b) => Date.parse(a.publishAt!) - Date.parse(b.publishAt!));
   const published = uploads.filter((u) => u.state !== "scheduled");
 
@@ -69,7 +80,7 @@ async function PublishingContent() {
 
       <TabsContent value="ready" className="flex flex-col gap-3">
         {ready.length === 0 ? (
-          <Empty text="No rendered Shorts waiting. Render a Short on its page and it shows up here." />
+          <Empty text="No rendered videos waiting. Render one in the Video studio and it shows up here." />
         ) : (
           ready.map((s) => <ReadyRow key={s.id} short={s} />)
         )}
@@ -125,31 +136,38 @@ function Empty({ text }: { text: string }) {
   );
 }
 
-function Thumb({ short }: { short?: ShortSummary }) {
-  return short?.thumbUrl ? (
-    // eslint-disable-next-line @next/next/no-img-element -- local generated poster
-    <img src={short.thumbUrl} alt="" loading="lazy" className="aspect-[9/16] w-16 shrink-0 rounded-lg object-cover ring-1 ring-border" />
+/** First second of the rendered video as a thumbnail. */
+function Thumb({ short }: { short?: Item }) {
+  return short ? (
+    <video
+      src={`/api/studio/${short.id}/file/final.mp4?v=${encodeURIComponent(short.render)}#t=1`}
+      muted
+      playsInline
+      preload="metadata"
+      className="aspect-[9/16] w-16 shrink-0 rounded-lg bg-black object-cover ring-1 ring-border"
+    />
   ) : (
     <div className="aspect-[9/16] w-16 shrink-0 rounded-lg bg-muted ring-1 ring-border" />
   );
 }
 
-function ReadyRow({ short }: { short: ShortSummary }) {
-  const render = getRender(short.id);
-  const { track } = getShortMusic(short.id);
+function ReadyRow({ short }: { short: Item }) {
+  const over = short.duration > 60;
   return (
     <Card className="py-4">
       <CardContent className="flex flex-col gap-4 md:flex-row md:items-center">
         <div className="flex min-w-0 flex-1 items-center gap-4">
           <Thumb short={short} />
           <div className="flex min-w-0 flex-col gap-1">
-            <Link href={`/shorts/${short.id}`} className="truncate font-medium hover:text-brand">
+            <Link href={`/studio?script=${short.id}`} className="truncate font-medium hover:text-brand">
               {short.title}
             </Link>
             <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-              {render && <span className="font-mono tabular-nums">{clock(render.duration)}</span>}
-              {short.renderedAt && <span>Rendered {timeAgo(short.renderedAt)}</span>}
-              <span>Music: {track ? <span className="capitalize">{track.mood}</span> : "none"}</span>
+              <span className={over ? "font-mono text-destructive tabular-nums" : "font-mono tabular-nums"}>
+                {clock(short.duration)}
+                {over && " · over 60s, not a Short"}
+              </span>
+              <span>Rendered {timeAgo(short.renderedAt)}</span>
             </p>
           </div>
         </div>
@@ -164,7 +182,7 @@ function ReadyRow({ short }: { short: ShortSummary }) {
 
 const STATE_LABEL: Record<Upload["state"], string> = { scheduled: "Scheduled", live: "Public", private: "Private", unlisted: "Unlisted" };
 
-function UploadRow({ upload, short, children }: { upload: Upload; short?: ShortSummary; children: React.ReactNode }) {
+function UploadRow({ upload, short, children }: { upload: Upload; short?: Item; children: React.ReactNode }) {
   return (
     <Card className="py-4">
       <CardContent className="flex flex-col gap-4 md:flex-row md:items-center">
@@ -172,7 +190,7 @@ function UploadRow({ upload, short, children }: { upload: Upload; short?: ShortS
           <Thumb short={short} />
           <div className="flex min-w-0 flex-col gap-1">
             <span className="flex min-w-0 items-center gap-2">
-              <Link href={`/shorts/${upload.scriptId}`} className="truncate font-medium hover:text-brand">
+              <Link href={`/studio?script=${upload.scriptId}`} className="truncate font-medium hover:text-brand">
                 {upload.title}
               </Link>
               <Badge variant={upload.state === "live" ? "default" : "secondary"} className="h-5 shrink-0 text-[10px]">

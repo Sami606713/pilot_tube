@@ -43,5 +43,3 @@ next-env.d.ts
 # local data (sqlite, renders)
 /data
 !.env.example
-cards/renders
-cards/compositions/generated

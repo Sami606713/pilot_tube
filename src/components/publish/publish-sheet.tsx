@@ -99,7 +99,7 @@ export function PublishSheet({ shortId, title, schedule }: { shortId: number; ti
           {!data && !loadError && <div className="skeleton h-96 rounded-xl" aria-busy="true" />}
           {data && (
             <>
-              <video src={`/api/script/${shortId}/video`} controls playsInline preload="metadata" className="mx-auto aspect-[9/16] h-72 rounded-xl bg-[#0b0b0d] ring-1 ring-border" />
+              <video src={`/api/studio/${shortId}/file/final.mp4`} controls playsInline preload="metadata" className="mx-auto aspect-[9/16] h-72 rounded-xl bg-[#0b0b0d] ring-1 ring-border" />
 
               <div className="flex flex-col gap-2">
                 <label htmlFor="pub-title" className="flex justify-between text-xs font-medium text-muted-foreground">
@@ -109,7 +109,7 @@ export function PublishSheet({ shortId, title, schedule }: { shortId: number; ti
               </div>
 
               <div className="flex flex-col gap-2">
-                <label htmlFor="pub-desc" className="text-xs font-medium text-muted-foreground">Description (hashtags and any music credit are already in it)</label>
+                <label htmlFor="pub-desc" className="text-xs font-medium text-muted-foreground">Description (source links and hashtags are already in it)</label>
                 <textarea id="pub-desc" rows={7} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className={field} />
               </div>
 

@@ -3,9 +3,9 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { composio, runYouTubeTool, youtubeApi } from "@/lib/composio";
 import { getDb } from "@/lib/db";
-import { getShortMusic } from "@/lib/music/short-music";
-import { getRender } from "@/lib/render/render";
-import type { ShortScript } from "@/lib/script/schema";
+import path from "node:path";
+import { getScript } from "@/lib/scripts/store";
+import { getProject, videoDir } from "@/lib/studio/store";
 
 const run = promisify(execFile);
 
@@ -57,23 +57,28 @@ export function listUploads(): Upload[] {
   return (getDb().prepare(`SELECT * FROM uploads ORDER BY COALESCE(publish_at, created_at) DESC`).all() as UploadRow[]).map(fromRow);
 }
 
-function loadScript(scriptId: number): ShortScript {
-  const row = getDb().prepare(`SELECT data FROM scripts WHERE id = ?`).get(scriptId) as { data: string } | undefined;
-  if (!row) throw new Error(`Short #${scriptId} not found`);
-  return JSON.parse(row.data) as ShortScript;
+function loadScript(scriptId: number) {
+  const content = getScript(scriptId)?.content;
+  if (!content) throw new Error(`Script #${scriptId} not found`);
+  return content;
+}
+
+/** The final video rendered in the Video studio. */
+function getRender(scriptId: number): { filePath: string; duration: number; createdAt: string } | null {
+  const p = getProject(scriptId);
+  if (!p?.render) return null;
+  return { filePath: path.join(videoDir(scriptId), p.render.file), duration: p.render.duration, createdAt: p.render.createdAt };
 }
 
 const hashtag = (t: string) => (t.startsWith("#") ? t : `#${t}`).replace(/\s+/g, "");
 
-/** Title, description and tags filled in from the script, plus the music credit when the track needs one. */
+/** Title, description (story + source links from the script) and hashtags. */
 export function publishDefaults(scriptId: number): { title: string; description: string; tags: string[] } {
   const script = loadScript(scriptId);
   const tags = [...new Set([...script.hashtags.map(hashtag), "#Shorts"])];
-  const { track } = getShortMusic(scriptId);
-  const credit = track?.license === "cc" && track.attribution ? `\n\nMusic:\n${track.attribution}` : "";
   return {
     title: script.title.slice(0, 100),
-    description: `${script.description}\n\n${tags.join(" ")}${credit}`,
+    description: `${script.description}\n\n${tags.join(" ")}`,
     tags: tags.map((t) => t.slice(1)),
   };
 }
@@ -95,19 +100,13 @@ export async function publishChecks(scriptId: number, input?: { title: string; d
   const render = getRender(scriptId);
   const meta = input ?? publishDefaults(scriptId);
   const size = render ? await videoSize(render.filePath) : null;
-  const { track } = getShortMusic(scriptId);
   const descBytes = Buffer.byteLength(meta.description);
   return [
-    { label: "Rendered video", ok: Boolean(render), detail: render ? undefined : "Render the Short first" },
+    { label: "Rendered video", ok: Boolean(render), detail: render ? undefined : "Render it in the Video studio first" },
     { label: "60 seconds or less", ok: Boolean(render && render.duration <= 60), detail: render ? `${render.duration.toFixed(1)}s` : undefined },
     { label: "Vertical 9:16", ok: Boolean(size && size.height > size.width), detail: size ? `${size.width}x${size.height}` : undefined },
     { label: "Title", ok: meta.title.trim().length > 0 && meta.title.length <= 100, detail: `${meta.title.length}/100` },
     { label: "Description", ok: descBytes <= 5000 && !/[<>]/.test(meta.description), detail: descBytes > 5000 ? "Too long" : /[<>]/.test(meta.description) ? "No < or > allowed" : undefined },
-    {
-      label: "Music credit",
-      ok: !(track?.license === "cc") || meta.description.includes(track.attribution ?? "\u0000"),
-      detail: track?.license === "cc" ? "Creative Commons track: credit must be in the description" : track ? "No credit needed" : "No music",
-    },
   ];
 }
 
@@ -161,7 +160,6 @@ export async function publishShort(scriptId: number, input: PublishInput): Promi
   getDb()
     .prepare(`INSERT INTO uploads (script_id, video_id, title, privacy, publish_at, render_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
     .run(scriptId, videoId, input.title.trim(), privacy, null, render.createdAt, now, now);
-  getDb().prepare(`UPDATE scripts SET status = 'uploaded' WHERE id = ?`).run(scriptId);
 
   if (input.publishAt) {
     try {
