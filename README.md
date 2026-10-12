@@ -54,7 +54,7 @@ Dramatic, storytelling Shorts scripts of 50-58 seconds (125-138 words at ~2.4 wo
 
 ## Video studio (`/studio`), part 1 of 3
 
-Pick a finished script → **Make video**: Deepgram Aura-2 "Zeus" voice (deep male) + Nova-3 word timings aligned to the script → Agnes writes Pexels search words per line → 3 portrait clip options per line (no clip reused across Shorts or lines), first one downloaded → live preview with `@remotion/player` → **Render**: Remotion CLI renders `src/remotion/Short.tsx` (1080×1920, 30 fps) then FFmpeg two-pass loudnorm to -14 LUFS.
+Pick a finished script → **Make video**: Deepgram Aura-2 "Hermes" voice (expressive male) + Nova-3 word timings aligned to the script → Agnes writes Pexels search words per line → 3 portrait clip options per line (no clip reused across Shorts or lines), first one downloaded → live preview with `@remotion/player` → **Render**: Remotion CLI renders `src/remotion/Short.tsx` (1080×1920, 30 fps) then FFmpeg two-pass loudnorm to -14 LUFS.
 
 Video: footage with slow push-in, the script's on-screen text slamming in, big word-by-word captions (spoken word in the accent color), progress bar. Per line you can pick another of the 3 clips or search new ones. Files in `data/videos/<scriptId>/`, table `videos`.
 
@@ -65,6 +65,18 @@ Video: footage with slow push-in, the script's on-screen text slamming in, big w
 - Transitions from the script (zoom punch, whip pan, glitch, light leak, 3D flip, blur slide) play across each cut without shifting the voice.
 - Agnes Video 2.5 Flash clips are tried for up to 2 B-roll lines (falls back to Pexels when its free queue is full), or per line with "Try AI clip".
 
-**Part 3 (done):** audio.
-- Sound effects: 8 sounds (impact, whoosh, riser, glitch, click, chime, rumble, shimmer) synthesized with FFmpeg once into `data/sfx/` and normalized to the same peak, so there is no library or license to track. Each cut gets the script's SFX cue, or the sound that fits its transition; risers and whooshes start early so they land on the cut. Can be switched off per video.
-- Music: the Music page (`/music`) holds your YouTube Audio Library tracks with a mood and license. The studio detects the script's mood (Agnes) and picks the least-used matching track, or you choose one / "No music". It loops under the voice, ducking from 0.26 to 0.08 while words are spoken, fading in and out. Creative Commons credit text is shown to copy into the description.
+**Part 3 (done):** sound effects. 8 sounds (impact, whoosh, riser, glitch, click, chime, rumble, shimmer) synthesized with FFmpeg once into `data/sfx/` and normalized to the same peak, so there is no library or license to track. Each cut gets the script's SFX cue, or the sound that fits its transition; risers and whooshes start early so they land on the cut. Can be switched off per video.
+
+Background music and the music library were removed on 2026-10-13 (user's choice); videos have voice + sound effects only.
+
+## Publishing (`/publishing`)
+
+Tabs Ready / Scheduled / Published. Ready = videos rendered in the Video studio and not uploaded. "Publish now" or "Schedule" opens a panel with the title, description (story + source links) and hashtags from the script, visibility, time, and checks (rendered, 60s or less, 9:16, title, description). Upload: `composio.files.upload` + `YOUTUBE_UPLOAD_VIDEO` (category 28); schedule: upload private, then `videos.update status.publishAt` through `composio.tools.proxyExecute`. Code: `src/lib/publish/youtube.ts`, table `uploads`.
+
+## Thumbnails (`/thumbnails`)
+
+Two tabs: **For a video** (Agnes reads the script and writes 3 different ideas for a clear picture of what the video is about) and **Custom** (your own description, 3 variations). Shape 9:16 (1080×1920) or 16:9 (1280×720). Pictures by Agnes Image 2.5 Flash (no text in the image); optional text is drawn by Remotion (`src/remotion/Thumbnail.tsx`, stills ThumbTall/ThumbWide) so it is never misspelled; without text FFmpeg crops to the exact size. Choose / download / delete per thumbnail. Code: `src/lib/thumbnails/thumbnails.ts`, table `thumbnails`, files in `data/thumbnails/`.
+
+## Planner (`/planner`)
+
+One Short a day, Monday-Sunday weeks with previous/next. Each day's stage is read from the real data: topic planned → writing script → script ready → video ready (rendered in the studio) → scheduled → published (uploads made from Publishing also show on their day). Plan a day from a typed topic, a finished research or a finished script; move or remove plans. Buttons per day: Write script (Quick research first for a typed topic), Make video (opens the studio), Schedule (uploads as private, public at the day's post time). Daily post time in table `settings` (default 18:00); plans in `plan_slots`. Days under 24h away without a ready video are outlined red; videos over 60s can't be scheduled.

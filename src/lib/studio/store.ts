@@ -34,10 +34,9 @@ export function newProject(scriptId: number, title: string): VideoProject {
   const steps: StudioStep[] = (Object.keys(STUDIO_STEP_LABELS) as StudioStepKey[]).map((key) => ({
     key,
     label: STUDIO_STEP_LABELS[key],
-    // Sound effects and music arrive in part 3.
     state: "waiting",
   }));
-  return saveProject({ scriptId, title, status: "running", steps, accent: DEFAULT_ACCENT, brand: null, music: null, mood: null, sfxEnabled: true, voice: null, lines: [], render: null, editedAt: now, error: null, createdAt: now, updatedAt: now });
+  return saveProject({ scriptId, title, status: "running", steps, accent: DEFAULT_ACCENT, brand: null, sfxEnabled: true, voice: null, lines: [], render: null, editedAt: now, error: null, createdAt: now, updatedAt: now });
 }
 
 export function setStep(scriptId: number, key: StudioStepKey, state: StudioStep["state"], detail?: string): VideoProject | null {
@@ -62,11 +61,3 @@ export function listProjects(): { scriptId: number; title: string; status: Video
   });
 }
 
-/** A deleted music track: videos that used it play without music. */
-export function clearMusic(trackId: number) {
-  const rows = getDb().prepare(`SELECT data FROM videos WHERE json_extract(data, '$.music.trackId') = ?`).all(trackId) as { data: string }[];
-  for (const r of rows) {
-    const p = JSON.parse(r.data) as VideoProject;
-    saveProject({ ...p, music: null, editedAt: new Date().toISOString() });
-  }
-}

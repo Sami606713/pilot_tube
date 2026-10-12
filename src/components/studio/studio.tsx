@@ -14,12 +14,12 @@ import { cn } from "@/lib/utils";
 import { Short } from "@/remotion/Short";
 
 type ScriptChoice = { id: number; title: string };
-type TrackChoice = { id: number; title: string; mood: string };
+type LibraryClip = { id: number; prompt: string; shape: string; duration: number };
 type Loaded = { project: VideoProject; props: ShortProps };
 
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
-export function Studio({ scripts, tracks, scriptId, initial }: { scripts: ScriptChoice[]; tracks: TrackChoice[]; scriptId: number | null; initial: Loaded | null }) {
+export function Studio({ scripts, clips, scriptId, initial }: { scripts: ScriptChoice[]; clips: LibraryClip[]; scriptId: number | null; initial: Loaded | null }) {
   const router = useRouter();
   const player = useRef<PlayerRef>(null);
   const [data, setData] = useState<Loaded | null>(initial);
@@ -218,44 +218,9 @@ export function Studio({ scripts, tracks, scriptId, initial }: { scripts: Script
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm">Audio</CardTitle>
+              <CardTitle className="text-sm">Sound effects</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <select
-                  value={project.music?.trackId ?? ""}
-                  onChange={(e) => audio({ music: e.target.value ? Number(e.target.value) : null }, "music")}
-                  disabled={busy !== null || working}
-                  aria-label="Background music"
-                  className="h-8 max-w-full rounded-lg border border-input bg-transparent px-2 text-sm sm:w-72"
-                >
-                  <option value="">No music</option>
-                  {tracks.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.title} ({t.mood})
-                    </option>
-                  ))}
-                </select>
-                <Button variant="outline" size="sm" onClick={() => audio({ music: "auto" }, "music")} disabled={busy !== null || working || tracks.length === 0}>
-                  {busy === "music" ? <CircleNotch className="animate-spin" /> : <Sparkle />} Pick by mood
-                </Button>
-                {project.mood && <span className="text-xs text-muted-foreground">Script mood: {project.mood}</span>}
-              </div>
-              {tracks.length === 0 && (
-                <p className="text-xs text-amber-400">
-                  Your Music library is empty.{" "}
-                  <a href="/music" className="underline underline-offset-2">
-                    Add tracks from the YouTube Audio Library
-                  </a>
-                  .
-                </p>
-              )}
-              {project.music?.attribution && (
-                <div className="flex flex-col gap-1 rounded-lg border border-border p-3 text-xs">
-                  <span className="text-muted-foreground">This track needs credit. Paste it into the YouTube description:</span>
-                  <span className="whitespace-pre-line">{project.music.attribution}</span>
-                </div>
-              )}
               <label className="flex w-fit items-center gap-2 text-sm">
                 <input
                   type="checkbox"
@@ -355,10 +320,6 @@ export function Studio({ scripts, tracks, scriptId, initial }: { scripts: Script
             ))}
             <span className="absolute top-1 -left-12 text-[10px] text-muted-foreground">sfx</span>
           </div>
-          <div className="relative ml-12 flex h-6 items-center rounded px-2 text-[10px]" style={{ background: project.music ? `${project.accent}33` : undefined }}>
-            <span className="absolute top-1 -left-12 text-[10px] text-muted-foreground">music</span>
-            <span className={project.music ? "text-foreground" : "text-subtle"}>{project.music ? `${project.music.title} · ducks under the voice` : "No music"}</span>
-          </div>
         </CardContent>
       </Card>
 
@@ -435,6 +396,24 @@ export function Studio({ scripts, tracks, scriptId, initial }: { scripts: Script
               </Button>
               <span className="text-xs text-muted-foreground">{busy === "ai" ? "Agnes is generating (up to 4 min)…" : "Agnes Video, free but often busy"}</span>
             </div>
+            {clips.length > 0 && (
+              <label className="flex flex-col gap-1.5 text-xs text-muted-foreground sm:max-w-md">
+                Or use a clip from your Clips library
+                <select
+                  value=""
+                  onChange={(e) => e.target.value && lineAction({ index: line.index, clipId: Number(e.target.value) }, "lib")}
+                  disabled={busy !== null || working}
+                  className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm text-foreground"
+                >
+                  <option value="">{busy === "lib" ? "Adding clip…" : "Pick a clip…"}</option>
+                  {clips.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      #{c.id} · {c.shape} · {c.duration.toFixed(0)}s · {c.prompt.slice(0, 60)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
 
             <p className="text-xs font-medium text-muted-foreground">Stock footage options</p>
             <div className="grid grid-cols-3 gap-3 sm:max-w-md">

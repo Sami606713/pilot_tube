@@ -130,32 +130,13 @@ function Captions({ words, accent }: { words: TimedWord[]; accent: string }) {
   );
 }
 
-/** Music level: full in gaps, ducked under the voice, eased between, faded in and out. */
-const MUSIC_FULL = 0.26;
-const MUSIC_DUCKED = 0.08;
-
-function musicVolume(t: number, words: TimedWord[], total: number): number {
-  let gap = Infinity;
-  for (const w of words) {
-    if (t >= w.start - 0.1 && t <= w.end + 0.1) {
-      gap = 0;
-      break;
-    }
-    gap = Math.min(gap, Math.abs(t - w.start), Math.abs(t - w.end));
-  }
-  const level = MUSIC_DUCKED + (MUSIC_FULL - MUSIC_DUCKED) * Math.min(1, Math.max(0, (gap - 0.15) / 0.35));
-  const fadeIn = Math.min(1, t / 0.8);
-  const fadeOut = Math.min(1, Math.max(0, (total - t) / 1.5));
-  return level * fadeIn * fadeOut;
-}
-
 /** Thin progress bar along the bottom, in the accent color. */
 function Progress({ accent, total }: { accent: string; total: number }) {
   const frame = useCurrentFrame();
   return <div style={{ position: "absolute", left: 0, bottom: 0, height: 10, width: `${(frame / total) * 100}%`, background: accent }} />;
 }
 
-export function Short({ accent, voice, words, lines, assets, music, sfx, duration }: ShortProps) {
+export function Short({ accent, voice, words, lines, assets, sfx }: ShortProps) {
   const { fps, durationInFrames } = useVideoConfig();
   return (
     <AbsoluteFill style={{ backgroundColor: "#050505" }}>
@@ -186,7 +167,6 @@ export function Short({ accent, voice, words, lines, assets, music, sfx, duratio
       <Captions words={words} accent={accent} />
       <Progress accent={accent} total={durationInFrames} />
       {voice && <Audio src={asset(assets, voice)} />}
-      {music && <Audio src={asset(assets, music)} loop volume={(f) => musicVolume(f / fps, words, duration)} />}
       {(sfx ?? []).map((s, i) => (
         <Sequence key={`sfx${i}`} from={Math.round(s.at * fps)} name={`SFX ${s.file}`} layout="none">
           <Audio src={asset(assets, s.file)} volume={s.volume} />

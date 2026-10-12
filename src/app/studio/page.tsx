@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Studio } from "@/components/studio/studio";
-import { listTracks } from "@/lib/music/library";
+import { listClips } from "@/lib/clips/clips";
 import { listScripts } from "@/lib/scripts/store";
 import { buildProps } from "@/lib/studio/engine";
 import { getProject } from "@/lib/studio/store";
@@ -30,6 +30,8 @@ async function StudioContent({ scriptId }: { scriptId: number | null }) {
     .map((s) => ({ id: s.id, title: s.title ?? s.topic }));
   const project = scriptId ? getProject(scriptId) : null;
   const initial = project ? { project, props: buildProps(project, `/api/studio/${project.scriptId}/file`) } : null;
-  const tracks = listTracks().map((t) => ({ id: t.id, title: t.title, mood: t.mood }));
-  return <Studio key={scriptId ?? 0} scripts={scripts} tracks={tracks} scriptId={scriptId} initial={initial} />;
+  const clips = listClips()
+    .filter((c) => c.state === "done")
+    .map((c) => ({ id: c.id, prompt: c.prompt, shape: c.shape, duration: c.duration ?? c.seconds }));
+  return <Studio key={scriptId ?? 0} scripts={scripts} clips={clips} scriptId={scriptId} initial={initial} />;
 }

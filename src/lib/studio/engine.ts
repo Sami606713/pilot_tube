@@ -1,6 +1,6 @@
 import "server-only";
 import { spawn } from "node:child_process";
-import { mkdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import { askJson } from "@/lib/agnes";
@@ -91,7 +91,7 @@ export async function runVideo(scriptId: number): Promise<void> {
 
   try {
     // 1. Voice + word timings
-    setStep(scriptId, "voice", "running", "Deepgram Zeus (deep male)");
+    setStep(scriptId, "voice", "running", "Deepgram Hermes (expressive male)");
     const narration = content.lines.map((l) => l.narration.trim()).join(" ");
     const audio = await synthesize(narration, VOICE);
     await writeFile(path.join(dir, "voice.mp3"), audio);
@@ -193,7 +193,7 @@ export async function runVideo(scriptId: number): Promise<void> {
         (aiTargets.length && !aiMade ? ` · Agnes clips skipped (${aiNote.slice(0, 60)})` : ""),
     );
 
-    // 5. Sound effects on the cuts + music by mood
+    // 5. Sound effects on the cuts
     await prepareAudio(scriptId);
     saveProject({ ...getProject(scriptId)!, status: "ready", editedAt: new Date().toISOString() });
   } catch (err) {
@@ -224,6 +224,20 @@ export async function aiClipForLine(scriptId: number, lineIndex: number): Promis
   const clip = await makeAiClip(scriptId, line);
   const fresh = getProject(scriptId)!;
   fresh.lines[lineIndex] = { ...fresh.lines[lineIndex], aiClip: clip, mode: "ai-clip" };
+  return saveProject({ ...fresh, editedAt: new Date().toISOString() });
+}
+
+/** Put a finished clip from the Clips library on a line (copied into the video folder). */
+export async function applyLibraryClip(scriptId: number, lineIndex: number, clipId: number): Promise<VideoProject> {
+  const { getClip, CLIP_DIR } = await import("@/lib/clips/clips");
+  const clip = getClip(clipId);
+  if (!clip?.file || clip.state !== "done") throw new Error("That clip is not ready");
+  const p = getProject(scriptId);
+  if (!p?.lines[lineIndex]) throw new Error("Line not found");
+  const name = `lib-${lineIndex}-${clipId}.mp4`;
+  await copyFile(path.join(CLIP_DIR(), clip.file), path.join(videoDir(scriptId), name));
+  const fresh = getProject(scriptId)!;
+  fresh.lines[lineIndex] = { ...fresh.lines[lineIndex], aiClip: { file: name, duration: clip.duration ?? clip.seconds }, mode: "ai-clip" };
   return saveProject({ ...fresh, editedAt: new Date().toISOString() });
 }
 
@@ -303,7 +317,6 @@ export function buildProps(p: VideoProject, assets: string): ShortProps {
       };
     }),
     assets,
-    music: p.music?.file ?? null,
     sfx: sfxProps(p),
   };
 }
@@ -336,7 +349,7 @@ export async function renderVideo(scriptId: number): Promise<void> {
   const raw = path.join(dir, "render.raw.mp4");
   const final = path.join(dir, "final.mp4");
   try {
-    // Sounds and music must sit in the render's public folder (e.g. music changed since the make).
+    // Sounds must sit in the render's public folder (e.g. switched on since the make).
     await ensureAudioFiles(p);
     await writeFile(propsFile, JSON.stringify(buildProps(p, "static")));
     let lastUpdate = 0;

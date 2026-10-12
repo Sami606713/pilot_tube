@@ -4,7 +4,7 @@ import { videoDir } from "@/lib/studio/store";
 
 const TYPES: Record<string, string> = { ".mp4": "video/mp4", ".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".wav": "audio/wav", ".ogg": "audio/ogg", ".png": "image/png" };
 
-/** Serves a video's own files (voice, clips, logos, sounds, music, final) so the preview can play and seek them. */
+/** Serves a video's own files (voice, clips, logos, sounds, final) so the preview can play and seek them. */
 export async function GET(req: Request, ctx: RouteContext<"/api/studio/[id]/file/[name]">) {
   const { id, name } = await ctx.params;
   if (!/^[\w.-]+\.(mp4|mp3|m4a|wav|ogg|png)$/.test(name)) return new Response("Not found", { status: 404 });

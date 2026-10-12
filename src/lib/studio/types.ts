@@ -5,8 +5,8 @@ import type { Part, Transition, VisualType } from "@/lib/scripts/types";
 export const FPS = 30;
 export const WIDTH = 1080;
 export const HEIGHT = 1920;
-/** Deepgram Aura-2 "Zeus": masculine, deep, smooth. */
-export const VOICE = "aura-2-zeus-en";
+/** Deepgram Aura-2 "Hermes": masculine, expressive, engaging (chosen by the user over Zeus/Jupiter). */
+export const VOICE = "aura-2-hermes-en";
 /** Accent when the story has no company with usable brand colors. */
 export const DEFAULT_ACCENT = "#FF3B30";
 
@@ -80,14 +80,13 @@ export type StudioLine = {
   aiClip: { file: string; duration: number } | null;
 };
 
-export type StudioStepKey = "voice" | "visuals" | "sfx" | "music" | "render";
+export type StudioStepKey = "voice" | "visuals" | "sfx" | "render";
 export type StudioStep = { key: StudioStepKey; label: string; state: "waiting" | "running" | "done" | "skipped" | "failed"; detail?: string };
 
 export const STUDIO_STEP_LABELS: Record<StudioStepKey, string> = {
   voice: "Voice and word timings",
   visuals: "Designing visuals for every line",
   sfx: "Sound effects on every cut",
-  music: "Background music",
   render: "Render final video",
 };
 
@@ -101,10 +100,6 @@ export type VideoProject = {
   accent: string;
   /** Main company of the story (accent color source). */
   brand: { name: string; domain: string } | null;
-  /** Background music from the Music library (null = none). */
-  music: { trackId: number; title: string; file: string; mood: string; attribution: string | null } | null;
-  /** Detected mood of the script, used to pick music. */
-  mood: string | null;
   sfxEnabled: boolean;
   voice: { file: string; duration: number; words: TimedWord[] } | null;
   lines: StudioLine[];
@@ -135,7 +130,6 @@ export type ShortProps = {
   }[];
   /** "static" = files are in the render's public dir; otherwise a URL prefix like /api/studio/3/file. */
   assets: string;
-  music: string | null;
   /** Sound effects: file, start time (s), volume 0-1. */
   sfx: { file: string; at: number; volume: number }[];
 };

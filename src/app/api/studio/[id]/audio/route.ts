@@ -1,12 +1,12 @@
-import { setAudio } from "@/lib/studio/audio";
+import { setSfx } from "@/lib/studio/audio";
 
-/** Body { music?: trackId | "auto" | null, sfx?: boolean }. */
+/** Body { sfx: boolean }: sound effects on or off. */
 export async function POST(req: Request, ctx: RouteContext<"/api/studio/[id]/audio">) {
   const id = Number((await ctx.params).id);
-  const body = (await req.json().catch(() => ({}))) as { music?: number | "auto" | null; sfx?: boolean };
-  const music = body.music === undefined || body.music === null || body.music === "auto" || typeof body.music === "number" ? body.music : undefined;
+  const body = (await req.json().catch(() => ({}))) as { sfx?: boolean };
+  if (typeof body.sfx !== "boolean") return Response.json({ error: "Send { sfx: true | false }" }, { status: 400 });
   try {
-    return Response.json(await setAudio(id, { music, sfx: typeof body.sfx === "boolean" ? body.sfx : undefined }));
+    return Response.json(await setSfx(id, body.sfx));
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 });
   }

@@ -52,16 +52,48 @@ export function getDb(): DatabaseSync {
       data   TEXT NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS music_tracks (
-      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    CREATE TABLE IF NOT EXISTS uploads (
+      script_id   INTEGER PRIMARY KEY,
+      video_id    TEXT NOT NULL,
       title       TEXT NOT NULL,
-      artist      TEXT,
-      mood        TEXT NOT NULL,
-      license     TEXT NOT NULL,
-      attribution TEXT,
-      file_path   TEXT NOT NULL,
-      duration    REAL NOT NULL,
+      privacy     TEXT NOT NULL,
+      publish_at  TEXT,
+      render_at   TEXT NOT NULL,
+      created_at  TEXT NOT NULL,
+      updated_at  TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS thumbnails (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      script_id  INTEGER,
+      title      TEXT NOT NULL,
+      shape      TEXT NOT NULL,
+      concept    TEXT NOT NULL,
+      prompt     TEXT NOT NULL,
+      headline   TEXT,
+      file       TEXT NOT NULL,
+      selected   INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS clips (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      data       TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS plan_slots (
+      day         TEXT PRIMARY KEY,
+      topic       TEXT,
+      research_id INTEGER,
+      script_id   INTEGER,
       created_at  TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS settings (
+      key   TEXT PRIMARY KEY,
+      value TEXT NOT NULL
     );
   `);
   return db;
